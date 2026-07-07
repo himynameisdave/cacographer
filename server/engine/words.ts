@@ -1,17 +1,21 @@
 import builtin from '../data/words.json';
 import { normalize } from './text';
-import type { Settings } from '../../src/lib/protocol';
+import { type Settings } from '../../src/lib/protocol';
 
 /** Word pool for a game per the room's word-source setting. Normalized + deduped. */
 export function buildWordPool(settings: Settings): string[] {
 	const pool = new Set<string>();
 	if (settings.wordSource !== 'custom') {
-		for (const w of builtin as string[]) pool.add(normalize(w));
+		for (const w of builtin as string[]) {
+			pool.add(normalize(w));
+		}
 	}
 	if (settings.wordSource !== 'builtin') {
 		for (const w of settings.customWords) {
 			const n = normalize(w);
-			if (n) pool.add(n);
+			if (n) {
+				pool.add(n);
+			}
 		}
 	}
 	pool.delete('');

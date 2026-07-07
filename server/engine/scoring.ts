@@ -23,7 +23,9 @@ export function ordinalBonus(order: number): number {
  * plus a sweep bonus when every eligible guesser got the word.
  */
 export function drawerPoints(timePoints: number[], eligibleCount: number): number {
-	if (timePoints.length === 0) return 0;
+	if (timePoints.length === 0) {
+		return 0;
+	}
 	const avg = timePoints.reduce((a, b) => a + b, 0) / timePoints.length;
 	const sweep = eligibleCount > 0 && timePoints.length === eligibleCount ? SWEEP_BONUS : 0;
 	return Math.round(avg + sweep);

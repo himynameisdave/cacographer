@@ -32,6 +32,10 @@
 			"error",
 			{ "cases": { "kebabCase": true, "camelCase": true, "pascalCase": true } }
 		],
+		"import/consistent-type-specifier-style": ["error", "prefer-inline"],
+		"import/no-unassigned-import": ["error", { "allow": ["**/*.css"] }],
+		"import/max-dependencies": ["error", { "max": 24 }],
+		"eslint/max-params": ["error", { "max": 5 }],
 		"import/no-named-export": "off",
 		"import/group-exports": "off",
 		"import/exports-last": "off",
@@ -42,10 +46,17 @@
 	},
 	"overrides": [
 		{
+			"files": ["**/*.svelte"],
+			"rules": {
+				"eslint/prefer-const": "off"
+			}
+		},
+		{
 			"files": ["server/engine/*.test.ts", "server/engine/testUtils.ts"],
 			"rules": {
 				"typescript/no-explicit-any": "off",
-				"typescript/no-non-null-assertion": "off"
+				"typescript/no-non-null-assertion": "off",
+				"eslint/max-classes-per-file": "off"
 			}
 		}
 	]

@@ -1,7 +1,7 @@
 {
 	"name": "cacographer",
-	"private": true,
 	"version": "0.0.1",
+	"private": true,
 	"type": "module",
 	"scripts": {
 		"dev": "concurrently -k -n game,web -c blue,magenta \"bun --watch server/index.ts\" \"vite dev\"",

@@ -30,7 +30,7 @@ CI (`.github/workflows/ci.yml`) runs lint → format:check → check → test �
 - **Linting is strict on purpose** (`.oxlintrc.json`: correctness/suspicious/pedantic/perf/style all at `error`, unicorn enabled). The disabled rules were each turned off deliberately with a reason; don't add new `"off"` entries or inline `oxlint-disable` comments without a justifying comment and a good argument.
 - **Svelte 5 runes only**: `$state`, `$derived`, `$effect`, `$props`. No legacy stores, no `$:` reactive statements, no `export let`.
 - **No new runtime dependencies** without a strong reason. The client is deliberately zero-dep (system fonts, hand-rolled components); the server is Bun built-ins only.
-- Comments explain *why* or state invariants; they never narrate what the next line does.
+- Comments explain _why_ or state invariants; they never narrate what the next line does.
 - TypeScript: no `any` outside tests; prefer discriminated unions (see `ClientMessage`/`ServerMessage`) over optional-field grab-bags.
 
 ## Testing

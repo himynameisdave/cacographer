@@ -5,8 +5,8 @@
  */
 import { existsSync, statSync } from 'node:fs';
 import path from 'node:path';
-import type { Server, ServerWebSocket } from 'bun';
-import type { ClientMessage, ServerMessage } from '../src/lib/protocol';
+import { type Server, type ServerWebSocket } from 'bun';
+import { type ClientMessage, type ServerMessage } from '../src/lib/protocol';
 import { RoomManager } from './engine/RoomManager';
 
 const PORT = Number(process.env.PORT ?? 3001);

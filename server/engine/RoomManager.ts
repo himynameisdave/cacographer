@@ -1,5 +1,5 @@
 import { Room, defaultDeps, type RoomDeps } from './Room';
-import type { PlayerId, ServerMessage } from '../../src/lib/protocol';
+import { type PlayerId, type ServerMessage } from '../../src/lib/protocol';
 
 export const TEARDOWN_MS = 60_000;
 
@@ -17,7 +17,9 @@ export class RoomManager {
 
 	create(): Room {
 		let code = this.generateCode();
-		while (this.rooms.has(code)) code = this.generateCode();
+		while (this.rooms.has(code)) {
+			code = this.generateCode();
+		}
 		const room = new Room(
 			code,
 			this.makeDeps((playerId, msg) => this.send(code, playerId, msg)),

@@ -15,7 +15,11 @@ export function maskWord(word: string, revealed: ReadonlySet<number>): string {
 
 export function letterCount(word: string): number {
 	let n = 0;
-	for (const ch of word) if (ch !== ' ') n++;
+	for (const ch of word) {
+		if (ch !== ' ') {
+			n++;
+		}
+	}
 	return n;
 }
 
@@ -28,7 +32,9 @@ export function maxHints(word: string, hintCount: number): number {
  * the i-th hint at drawMs * i / (hints + 1). */
 export function revealSchedule(drawMs: number, hints: number): number[] {
 	const out: number[] = [];
-	for (let i = 1; i <= hints; i++) out.push(Math.round((drawMs * i) / (hints + 1)));
+	for (let i = 1; i <= hints; i++) {
+		out.push(Math.round((drawMs * i) / (hints + 1)));
+	}
 	return out;
 }
 
@@ -40,8 +46,12 @@ export function pickRevealIndex(
 ): number | null {
 	const candidates: number[] = [];
 	for (let i = 0; i < word.length; i++) {
-		if (word[i] !== ' ' && !revealed.has(i)) candidates.push(i);
+		if (word[i] !== ' ' && !revealed.has(i)) {
+			candidates.push(i);
+		}
 	}
-	if (candidates.length === 0) return null;
+	if (candidates.length === 0) {
+		return null;
+	}
 	return candidates[Math.floor(random() * candidates.length)];
 }
