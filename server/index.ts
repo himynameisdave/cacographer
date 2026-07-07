@@ -106,7 +106,9 @@ function serveStatic(pathname: string): Response {
 	} catch {
 		stat = null;
 	}
-	if (!stat || !stat.isFile()) filePath = indexHtml;
+	if (!stat || !stat.isFile()) {
+		filePath = indexHtml;
+	}
 
 	const headers = new Headers();
 	if (filePath === indexHtml) {
@@ -130,9 +132,9 @@ const CORS_HEADERS = {
 } as const;
 
 function json(body: unknown, status = 200): Response {
-	return new Response(JSON.stringify(body), {
+	return Response.json(body, {
 		status,
-		headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+		headers: { 'Access-Control-Allow-Origin': '*' }
 	});
 }
 
@@ -150,10 +152,12 @@ function fetchHandler(req: Request, server: Server): Response | undefined {
 			return json({ code: room.code });
 		}
 
-		const roomMatch = pathname.match(/^\/api\/rooms\/([^/]+)$/);
-		if (req.method === 'GET' && roomMatch) {
-			const room = manager.get(roomMatch[1]);
-			if (!room) return json({ exists: false });
+		const roomMatch = pathname.match(/^\/api\/rooms\/(?<code>[^/]+)$/u);
+		if (req.method === 'GET' && roomMatch?.groups) {
+			const room = manager.get(roomMatch.groups.code);
+			if (!room) {
+				return json({ exists: false });
+			}
 			return json({
 				exists: true,
 				phase: room.phase,
@@ -167,11 +171,15 @@ function fetchHandler(req: Request, server: Server): Response | undefined {
 
 	if (pathname === '/ws') {
 		const upgraded = server.upgrade(req, { data: { code: null, playerId: null } });
-		if (upgraded) return undefined;
+		if (upgraded) {
+			return undefined;
+		}
 		return new Response('WebSocket upgrade failed', { status: 400 });
 	}
 
-	if (hasBuild) return serveStatic(pathname);
+	if (hasBuild) {
+		return serveStatic(pathname);
+	}
 
 	// Dev mode: Vite serves the app; nothing to serve here.
 	return json({ error: 'not_found' }, 404);
@@ -213,7 +221,9 @@ function handleJoin(ws: Socket, msg: Record<string, unknown>): void {
 
 function messageHandler(ws: Socket, raw: string | Buffer): void {
 	const size = typeof raw === 'string' ? Buffer.byteLength(raw) : raw.byteLength;
-	if (size > MAX_MESSAGE_BYTES) return;
+	if (size > MAX_MESSAGE_BYTES) {
+		return;
+	}
 
 	let msg: ClientMessage;
 	try {
@@ -236,14 +246,18 @@ function messageHandler(ws: Socket, raw: string | Buffer): void {
 	// Joined: rate-limit, then hand off to the room.
 	const buckets = bucketsFor(ws);
 	if (msg.type === 'draw') {
-		if (!take(buckets.draw, 60, 120)) return; // silently drop
+		if (!take(buckets.draw, 60, 120)) {
+			return;
+		} // silently drop
 	} else if (msg.type === 'guess' || msg.type === 'chat') {
 		if (!take(buckets.text, 5, 10)) {
 			sendTo(ws, { type: 'error', code: 'rate_limited', message: 'Slow down' });
 			return;
 		}
 	} else {
-		if (!take(buckets.other, 10, 20)) return; // silently drop
+		if (!take(buckets.other, 10, 20)) {
+			return;
+		} // silently drop
 	}
 
 	manager.get(ws.data.code!)?.handleMessage(ws.data.playerId, msg);

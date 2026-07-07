@@ -1,0 +1,52 @@
+{
+	"$schema": "./node_modules/oxlint/configuration_schema.json",
+	"plugins": ["typescript", "unicorn", "oxc", "import", "promise", "node"],
+	"categories": {
+		"correctness": "error",
+		"suspicious": "error",
+		"pedantic": "error",
+		"perf": "error",
+		"style": "error"
+	},
+	"env": {
+		"browser": true,
+		"es2024": true
+	},
+	"ignorePatterns": ["build", ".svelte-kit", "node_modules"],
+	"rules": {
+		"eslint/sort-keys": "off",
+		"eslint/id-length": "off",
+		"eslint/no-ternary": "off",
+		"eslint/no-continue": "off",
+		"eslint/no-magic-numbers": "off",
+		"eslint/no-inline-comments": "off",
+		"eslint/capitalized-comments": "off",
+		"eslint/func-style": "off",
+		"eslint/max-statements": "off",
+		"eslint/max-lines": "off",
+		"eslint/max-lines-per-function": "off",
+		"eslint/sort-imports": "off",
+		"eslint/init-declarations": "off",
+		"unicorn/no-null": "off",
+		"unicorn/filename-case": [
+			"error",
+			{ "cases": { "kebabCase": true, "camelCase": true, "pascalCase": true } }
+		],
+		"import/no-named-export": "off",
+		"import/group-exports": "off",
+		"import/exports-last": "off",
+		"import/no-nodejs-modules": "off",
+		"import/prefer-default-export": "off",
+		"typescript/parameter-properties": "off",
+		"node/no-sync": "off"
+	},
+	"overrides": [
+		{
+			"files": ["server/engine/*.test.ts", "server/engine/testUtils.ts"],
+			"rules": {
+				"typescript/no-explicit-any": "off",
+				"typescript/no-non-null-assertion": "off"
+			}
+		}
+	]
+}
