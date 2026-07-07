@@ -160,6 +160,9 @@ Thumbs.db
 .env.*
 !.env.example
 !.env.test
+# These two hold only the public game-server URL — commit them.
+!.env
+!.env.development
 
 # Vite
 vite.config.js.timestamp-*
