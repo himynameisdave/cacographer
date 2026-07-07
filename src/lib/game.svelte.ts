@@ -1,0 +1,300 @@
+import {
+	type ChatEntry,
+	type ClientPlayer,
+	type ClientRoom,
+	type DrawOp,
+	type ErrorCode,
+	type PlayerId,
+	type ServerMessage
+} from '$lib/protocol';
+import { type SocketStatus } from '$lib/realtime/client';
+
+const CHAT_CAP = 200;
+const CLOSE_FLASH_MS = 2500;
+
+/** Errors that mean the join itself failed (server closes the socket after). */
+const JOIN_ERRORS: ReadonlySet<ErrorCode> = new Set(['room_not_found', 'room_full', 'name_taken']);
+
+/**
+ * Client-side mirror of the room, maintained incrementally from server
+ * messages. `roomState` broadcasts are the resync source of truth — every
+ * phase change carries one, so incremental patches only need to be
+ * "good enough until the next snapshot".
+ */
+export class GameState {
+	you = $state<PlayerId | null>(null);
+	room = $state<ClientRoom | null>(null);
+	chat = $state<ChatEntry[]>([]);
+	/** Word choices — only ever populated at the drawer, during 'choosing'. */
+	choices = $state<{ words: string[]; endsAt: number } | null>(null);
+	/** The secret word — only ever populated at the drawer, during 'drawing'. */
+	word = $state<string | null>(null);
+	/** Briefly true after an almost-correct guess ("So close!"). */
+	closeFlash = $state(false);
+	status = $state<SocketStatus>('closed');
+	fatalError = $state<{ code: ErrorCode; message: string } | null>(null);
+
+	private closeFlashTimer: ReturnType<typeof setTimeout> | null = null;
+
+	get me(): ClientPlayer | null {
+		return this.room?.players.find((p) => p.id === this.you) ?? null;
+	}
+
+	get isHost(): boolean {
+		return this.me?.isHost ?? false;
+	}
+
+	get isDrawer(): boolean {
+		return this.you !== null && this.room?.drawerId === this.you;
+	}
+
+	get drawer(): ClientPlayer | null {
+		const { room } = this;
+		if (!room || room.drawerId === null) {
+			return null;
+		}
+		return room.players.find((p) => p.id === room.drawerId) ?? null;
+	}
+
+	get playersByScore(): ClientPlayer[] {
+		return this.room ? [...this.room.players].toSorted((a, b) => b.score - a.score) : [];
+	}
+
+	apply(msg: ServerMessage): void {
+		switch (msg.type) {
+			case 'joined': {
+				this.you = msg.you;
+				this.room = msg.room;
+				this.fatalError = null;
+				// If we're the drawer and we dropped, the server ended our turn —
+				// stale secrets from a previous connection can't apply anymore.
+				this.choices = null;
+				this.word = null;
+				break;
+			}
+
+			case 'roomState': {
+				this.room = msg.room;
+				if (msg.room.phase !== 'choosing') {
+					this.choices = null;
+				}
+				if (msg.room.phase !== 'drawing') {
+					this.word = null;
+				}
+				break;
+			}
+
+			case 'playerJoined': {
+				const { room } = this;
+				if (!room) {
+					break;
+				}
+				const i = room.players.findIndex((p) => p.id === msg.player.id);
+				if (i === -1) {
+					room.players.push(msg.player);
+				} else {
+					room.players[i] = msg.player;
+				}
+				break;
+			}
+
+			case 'playerLeft': {
+				if (this.room) {
+					this.room.players = this.room.players.filter((p) => p.id !== msg.id);
+				}
+				break;
+			}
+
+			case 'playerConnection': {
+				const player = this.room?.players.find((p) => p.id === msg.id);
+				if (player) {
+					player.connected = msg.connected;
+				}
+				break;
+			}
+
+			case 'hostChanged': {
+				if (this.room) {
+					for (const p of this.room.players) {
+						p.isHost = p.id === msg.hostId;
+					}
+				}
+				break;
+			}
+
+			case 'turnStarted': {
+				const { room } = this;
+				if (!room) {
+					break;
+				}
+				room.phase = 'choosing';
+				room.drawerId = msg.drawerId;
+				room.round = msg.round;
+				room.turnIndex = msg.turnIndex;
+				room.endsAt = msg.endsAt;
+				room.ops = [];
+				room.masked = null;
+				room.lastWord = null;
+				room.lastGains = null;
+				for (const p of room.players) {
+					p.guessedThisTurn = false;
+				}
+				this.choices = null;
+				this.word = null;
+				break;
+			}
+
+			case 'wordChoices': {
+				this.choices = { words: msg.choices, endsAt: msg.endsAt };
+				break;
+			}
+
+			case 'drawingStarted': {
+				const { room } = this;
+				if (!room) {
+					break;
+				}
+				room.phase = 'drawing';
+				room.masked = msg.masked;
+				room.endsAt = msg.endsAt;
+				this.choices = null;
+				break;
+			}
+
+			case 'yourWord': {
+				this.word = msg.word;
+				break;
+			}
+
+			case 'draw': {
+				this.applyDraw(msg.op);
+				break;
+			}
+
+			case 'clearCanvas': {
+				if (this.room) {
+					this.room.ops = [];
+				}
+				break;
+			}
+
+			case 'canvasState': {
+				if (this.room) {
+					this.room.ops = msg.ops;
+				}
+				break;
+			}
+
+			case 'letterRevealed': {
+				if (this.room) {
+					this.room.masked = msg.masked;
+				}
+				break;
+			}
+
+			case 'guessResult': {
+				if (!msg.correct && msg.close) {
+					this.closeFlash = true;
+					if (this.closeFlashTimer !== null) {
+						clearTimeout(this.closeFlashTimer);
+					}
+					this.closeFlashTimer = setTimeout(() => {
+						this.closeFlash = false;
+						this.closeFlashTimer = null;
+					}, CLOSE_FLASH_MS);
+				}
+				break;
+			}
+
+			case 'playerGuessed': {
+				const player = this.room?.players.find((p) => p.id === msg.id);
+				if (player) {
+					player.guessedThisTurn = true;
+				}
+				break;
+			}
+
+			case 'chat': {
+				this.chat.push(msg.entry);
+				if (this.chat.length > CHAT_CAP) {
+					this.chat.splice(0, this.chat.length - CHAT_CAP);
+				}
+				break;
+			}
+
+			case 'timeSync': {
+				if (this.room) {
+					this.room.endsAt = msg.endsAt;
+				}
+				break;
+			}
+
+			case 'turnEnded': {
+				const { room } = this;
+				if (!room) {
+					break;
+				}
+				room.phase = 'reveal';
+				room.lastWord = msg.word;
+				room.lastGains = msg.gains;
+				room.endsAt = msg.endsAt;
+				for (const p of room.players) {
+					const total = msg.totals[p.id];
+					if (total !== undefined) {
+						p.score = total;
+					}
+				}
+				this.choices = null;
+				this.word = null;
+				break;
+			}
+
+			case 'gameEnded': {
+				const { room } = this;
+				if (!room) {
+					break;
+				}
+				room.phase = 'finished';
+				room.winnerId = msg.winnerId;
+				room.endsAt = null;
+				for (const p of room.players) {
+					const total = msg.totals[p.id];
+					if (total !== undefined) {
+						p.score = total;
+					}
+				}
+				this.choices = null;
+				this.word = null;
+				break;
+			}
+
+			case 'error': {
+				if (JOIN_ERRORS.has(msg.code)) {
+					this.fatalError = { code: msg.code, message: msg.message };
+				} else {
+					// Non-fatal rejection (rate limit etc.) — surface it in chat.
+					this.chat.push({ id: null, name: '', text: msg.message, scope: 'system' });
+				}
+				break;
+			}
+		}
+	}
+
+	/**
+	 * Append-or-merge a draw op into room.ops. Used both for incoming server
+	 * `draw` messages and for the drawer's own outgoing ops (the server does
+	 * not echo draw ops back to their author).
+	 */
+	applyDraw(op: DrawOp): void {
+		const { room } = this;
+		if (!room) {
+			return;
+		}
+		const last = room.ops.at(-1);
+		if (op.kind === 'stroke' && last?.kind === 'stroke' && last.id === op.id) {
+			last.points.push(...op.points);
+		} else {
+			room.ops.push(op);
+		}
+	}
+}
