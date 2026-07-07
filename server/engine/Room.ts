@@ -30,15 +30,21 @@ export const SKIP_REVEAL_MS = 2500; // shorter interstitial when a turn is skipp
 export const GRACE_MS = 60_000; // disconnected player keeps slot/score this long
 export const SYNC_MS = 5000;
 
+/**
+ * Opaque timer handle from `deps.schedule` — `unknown` because Node/Bun's `setTimeout`
+ * return different shapes and the engine must stay transport-agnostic. `deps.cancel`'s own
+ * implementation is the one place that knows the real shape and narrows it back; that's a
+ * deliberate, deep-readonly-safe narrowing, not a real `any` leak.
+ */
 export type TimerHandle = unknown;
 
-export interface RoomDeps {
-	send: (playerId: PlayerId, msg: ServerMessage) => void;
-	now: () => number;
-	schedule: (fn: () => void, ms: number) => TimerHandle;
-	cancel: (handle: TimerHandle) => void;
-	random: () => number;
-}
+export type RoomDeps = {
+	readonly send: (playerId: PlayerId, msg: ServerMessage) => void;
+	readonly now: () => number;
+	readonly schedule: (fn: () => void, ms: number) => TimerHandle;
+	readonly cancel: (handle: TimerHandle) => void;
+	readonly random: () => number;
+};
 
 function clampSetting(v: unknown, [min, max]: readonly [number, number], fallback: number): number {
 	const n = Math.round(Number(v));
@@ -54,12 +60,15 @@ export function defaultDeps(send: RoomDeps['send']): RoomDeps {
 		send,
 		now: () => Date.now(),
 		schedule: (fn, ms) => setTimeout(fn, ms),
-		cancel: (h) => clearTimeout(h as ReturnType<typeof setTimeout>),
+		cancel: (h) => {
+			// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see TimerHandle's doc comment
+			clearTimeout(h as ReturnType<typeof setTimeout>);
+		},
 		random: Math.random
 	};
 }
 
-interface ServerPlayer {
+type ServerPlayer = {
 	id: PlayerId;
 	name: string;
 	score: number;
@@ -67,10 +76,11 @@ interface ServerPlayer {
 	guessedThisTurn: boolean;
 	guessedAtMs: number | null;
 	guessOrder: number | null;
+	// oxlint-disable-next-line typescript/no-redundant-type-constituents -- see TimerHandle's doc comment
 	graceTimer: TimerHandle | null;
-}
+};
 
-interface TurnState {
+type TurnState = {
 	drawerId: PlayerId;
 	choices: string[];
 	word: string | null;
@@ -78,7 +88,7 @@ interface TurnState {
 	masked: string;
 	endsAt: number; // deadline of the *current* phase (choosing/drawing/reveal)
 	drawMs: number;
-}
+};
 
 type JoinResult =
 	| { ok: true; playerId: PlayerId }
@@ -101,16 +111,18 @@ export class Room {
 	winnerId: PlayerId | null = null;
 
 	private wordPool: string[] = [];
+	// oxlint-disable-next-line typescript/no-redundant-type-constituents -- see TimerHandle's doc comment
 	private phaseTimer: TimerHandle | null = null;
 	private hintTimers: TimerHandle[] = [];
+	// oxlint-disable-next-line typescript/no-redundant-type-constituents -- see TimerHandle's doc comment
 	private syncTimer: TimerHandle | null = null;
 	private playerSeq = 0;
 	private disposed = false;
 
 	constructor(
 		code: string,
-		private deps: RoomDeps,
-		private onEmpty: () => void = () => {}
+		private readonly deps: RoomDeps,
+		private readonly onEmpty: () => void = () => {}
 	) {
 		this.code = code;
 	}
@@ -142,11 +154,11 @@ export class Room {
 		// Same-name rejoin while the slot is in its grace period reattaches the
 		// old player (score retained).
 		const existing = [...this.players.values()].find(
-			(p) => !p.connected && normalize(p.name) === normalize(name)
+			(p: Readonly<ServerPlayer>) => !p.connected && normalize(p.name) === normalize(name)
 		);
 		if (existing) {
 			existing.connected = true;
-			if (existing.graceTimer) {
+			if (existing.graceTimer !== null) {
 				this.deps.cancel(existing.graceTimer);
 			}
 			existing.graceTimer = null;
@@ -167,7 +179,11 @@ export class Room {
 		if (this.players.size >= this.settings.maxPlayers) {
 			return { ok: false, code: 'room_full', message: 'Room is full' };
 		}
-		if ([...this.players.values()].some((p) => normalize(p.name) === normalize(name))) {
+		if (
+			[...this.players.values()].some(
+				(p: Readonly<ServerPlayer>) => normalize(p.name) === normalize(name)
+			)
+		) {
 			return { ok: false, code: 'name_taken', message: 'Name already taken' };
 		}
 
@@ -183,9 +199,7 @@ export class Room {
 			graceTimer: null
 		};
 		this.players.set(id, player);
-		if (this.hostId === null) {
-			this.hostId = id;
-		}
+		this.hostId ??= id;
 		if (this.midGame()) {
 			this.turnOrder.push(id);
 		}
@@ -219,7 +233,9 @@ export class Room {
 			this.checkAllGuessed();
 		}
 
-		player.graceTimer = this.deps.schedule(() => this.removePlayer(playerId), GRACE_MS);
+		player.graceTimer = this.deps.schedule(() => {
+			this.removePlayer(playerId);
+		}, GRACE_MS);
 		if (this.connectedCount === 0) {
 			this.onEmpty();
 		}
@@ -272,33 +288,50 @@ export class Room {
 		}
 		switch (msg.type) {
 			case 'updateSettings': {
-				return this.updateSettings(playerId, msg.settings);
+				this.updateSettings(playerId, msg.settings);
+				return;
 			}
 			case 'startGame': {
-				return this.startGame(playerId);
+				this.startGame(playerId);
+				return;
 			}
 			case 'chooseWord': {
-				return this.chooseWord(playerId, msg.word);
+				this.chooseWord(playerId, msg.word);
+				return;
 			}
 			case 'draw': {
-				return this.draw(playerId, msg.op);
+				this.draw(playerId, msg.op);
+				return;
 			}
 			case 'clearCanvas': {
-				return this.clearCanvas(playerId);
+				this.clearCanvas(playerId);
+				return;
 			}
 			case 'undo': {
-				return this.undo(playerId);
+				this.undo(playerId);
+				return;
 			}
 			case 'guess': {
-				return this.guess(playerId, msg.text);
+				this.guess(playerId, msg.text);
+				return;
 			}
 			case 'chat': {
-				return this.chat(playerId, msg.text);
+				this.chat(playerId, msg.text);
+				return;
 			}
 			case 'playAgain': {
-				return this.playAgain(playerId);
+				this.playAgain(playerId);
+				return;
+			}
+			case 'join': {
+				// The transport (server/index.ts) routes 'join' separately, before a player is
+				// registered, and never forwards it here — this only fires on a resent 'join'.
+				this.sendError(playerId, 'bad_message', 'Already joined');
+				return;
 			}
 			default: {
+				// Reachable at runtime despite exhaustive typing: `msg` is deserialized from an
+				// untyped wire payload, so an unrecognized `type` can still arrive here.
 				this.sendError(playerId, 'bad_message', 'Unknown message type');
 			}
 		}
@@ -310,13 +343,17 @@ export class Room {
 
 	private updateSettings(playerId: PlayerId, partial: Partial<Settings>): void {
 		if (playerId !== this.hostId) {
-			return this.sendError(playerId, 'not_allowed', 'Host only');
+			this.sendError(playerId, 'not_allowed', 'Host only');
+			return;
 		}
 		if (this.phase !== 'lobby') {
-			return this.sendError(playerId, 'not_allowed', 'Settings are locked during the game');
+			this.sendError(playerId, 'not_allowed', 'Settings are locked during the game');
+			return;
 		}
 
-		const s = this.settings;
+		// `Settings` is deeply readonly (it's also the wire type) — build a mutable draft and
+		// swap it in at the end rather than mutating `this.settings` in place.
+		const s = { ...this.settings };
 		if ('rounds' in partial) {
 			s.rounds = clampSetting(partial.rounds, SETTINGS_BOUNDS.rounds, s.rounds);
 		}
@@ -342,9 +379,11 @@ export class Room {
 		}
 		if (
 			'wordSource' in partial &&
-			['builtin', 'custom', 'both'].includes(partial.wordSource as string)
+			(partial.wordSource === 'builtin' ||
+				partial.wordSource === 'custom' ||
+				partial.wordSource === 'both')
 		) {
-			s.wordSource = partial.wordSource as Settings['wordSource'];
+			s.wordSource = partial.wordSource;
 		}
 		if ('customWords' in partial && Array.isArray(partial.customWords)) {
 			s.customWords = partial.customWords
@@ -353,23 +392,28 @@ export class Room {
 				.filter(Boolean)
 				.slice(0, LIMITS.customWordsTotal);
 		}
+		this.settings = s;
 		this.broadcast({ type: 'roomState', room: this.toClientRoom() });
 	}
 
 	private startGame(playerId: PlayerId): void {
 		if (playerId !== this.hostId) {
-			return this.sendError(playerId, 'not_allowed', 'Host only');
+			this.sendError(playerId, 'not_allowed', 'Host only');
+			return;
 		}
 		if (this.phase !== 'lobby') {
-			return this.sendError(playerId, 'not_allowed', 'Game already running');
+			this.sendError(playerId, 'not_allowed', 'Game already running');
+			return;
 		}
 		if (this.connectedCount < 2) {
-			return this.sendError(playerId, 'not_allowed', 'Need at least 2 players');
+			this.sendError(playerId, 'not_allowed', 'Need at least 2 players');
+			return;
 		}
 
 		this.wordPool = buildWordPool(this.settings);
 		if (this.wordPool.length === 0) {
-			return this.sendError(playerId, 'not_allowed', 'Word list is empty — add custom words');
+			this.sendError(playerId, 'not_allowed', 'Word list is empty — add custom words');
+			return;
 		}
 
 		for (const p of this.players.values()) {
@@ -382,7 +426,9 @@ export class Room {
 		this.lastWord = null;
 		this.lastGains = null;
 		this.winnerId = null;
-		this.turnOrder = [...this.players.values()].filter((p) => p.connected).map((p) => p.id);
+		this.turnOrder = [...this.players.values()]
+			.filter((p: Readonly<ServerPlayer>) => p.connected)
+			.map((p: Readonly<ServerPlayer>) => p.id);
 		this.round = 1;
 		this.turnIndex = 0;
 		this.systemChat('Game started!');
@@ -391,7 +437,8 @@ export class Room {
 
 	private playAgain(playerId: PlayerId): void {
 		if (playerId !== this.hostId) {
-			return this.sendError(playerId, 'not_allowed', 'Host only');
+			this.sendError(playerId, 'not_allowed', 'Host only');
+			return;
 		}
 		if (this.phase !== 'finished') {
 			return;
@@ -422,23 +469,26 @@ export class Room {
 			return;
 		}
 		if (this.connectedCount < 2) {
-			return this.abortGame('Not enough players — back to the lobby');
+			this.abortGame('Not enough players — back to the lobby');
+			return;
 		}
 
 		// Skip drawers who are disconnected (grace slots) or gone.
 		let guard = this.turnOrder.length * this.settings.rounds + 1;
 		while (guard-- > 0) {
 			const drawer = this.players.get(this.turnOrder[this.turnIndex]);
-			if (drawer?.connected) {
+			if (drawer?.connected === true) {
 				break;
 			}
 			if (this.advanceTurnPointer()) {
-				return this.endGame();
+				this.endGame();
+				return;
 			}
 		}
 		const drawer = this.players.get(this.turnOrder[this.turnIndex]);
-		if (!drawer?.connected) {
-			return this.abortGame('No available drawer — back to the lobby');
+		if (drawer === undefined || !drawer.connected) {
+			this.abortGame('No available drawer — back to the lobby');
+			return;
 		}
 
 		this.clearTurnTimers();
@@ -475,7 +525,9 @@ export class Room {
 		});
 		this.deps.send(drawer.id, { type: 'wordChoices', choices, endsAt });
 		this.broadcast({ type: 'roomState', room: this.toClientRoom() });
-		this.phaseTimer = this.deps.schedule(() => this.autoChoose(), CHOOSE_MS);
+		this.phaseTimer = this.deps.schedule(() => {
+			this.autoChoose();
+		}, CHOOSE_MS);
 	}
 
 	/** @returns true when the game is over (past the last round). */
@@ -498,13 +550,15 @@ export class Room {
 
 	private chooseWord(playerId: PlayerId, word: string): void {
 		if (this.phase !== 'choosing' || !this.turn || this.turn.drawerId !== playerId) {
-			return this.sendError(playerId, 'not_allowed', 'Not your word to choose');
+			this.sendError(playerId, 'not_allowed', 'Not your word to choose');
+			return;
 		}
 		const chosen = this.turn.choices.find((c) => c === normalize(word));
-		if (!chosen) {
-			return this.sendError(playerId, 'not_allowed', 'Pick one of the offered words');
+		if (chosen === undefined) {
+			this.sendError(playerId, 'not_allowed', 'Pick one of the offered words');
+			return;
 		}
-		if (this.phaseTimer) {
+		if (this.phaseTimer !== null) {
 			this.deps.cancel(this.phaseTimer);
 		}
 		this.beginDrawing(chosen);
@@ -527,9 +581,13 @@ export class Room {
 
 		const hints = maxHints(word, this.settings.hintCount);
 		this.hintTimers = revealSchedule(this.turn.drawMs, hints).map((offset) =>
-			this.deps.schedule(() => this.revealLetter(), offset)
+			this.deps.schedule(() => {
+				this.revealLetter();
+			}, offset)
 		);
-		this.phaseTimer = this.deps.schedule(() => this.endTurn('time'), this.turn.drawMs);
+		this.phaseTimer = this.deps.schedule(() => {
+			this.endTurn('time');
+		}, this.turn.drawMs);
 		const tick = () => {
 			if (this.phase !== 'drawing' || !this.turn) {
 				return;
@@ -541,7 +599,7 @@ export class Room {
 	}
 
 	private revealLetter(): void {
-		if (this.phase !== 'drawing' || !this.turn?.word) {
+		if (this.phase !== 'drawing' || this.turn === null || this.turn.word === null) {
 			return;
 		}
 		const idx = pickRevealIndex(this.turn.word, this.turn.revealed, this.deps.random);
@@ -564,11 +622,13 @@ export class Room {
 			return;
 		}
 
-		if (this.phase !== 'drawing' || !this.turn?.word) {
-			return this.chat(playerId, text);
+		if (this.phase !== 'drawing' || this.turn === null || this.turn.word === null) {
+			this.chat(playerId, text);
+			return;
 		}
 		if (playerId === this.turn.drawerId || player.guessedThisTurn) {
-			return this.sendChat({ id: playerId, name: player.name, text, scope: 'guessed' });
+			this.sendChat({ id: playerId, name: player.name, text, scope: 'guessed' });
+			return;
 		}
 
 		const guess = normalize(text);
@@ -577,7 +637,9 @@ export class Room {
 		if (guess === word) {
 			player.guessedThisTurn = true;
 			player.guessedAtMs = this.deps.now();
-			player.guessOrder = [...this.players.values()].filter((p) => p.guessOrder !== null).length;
+			player.guessOrder = [...this.players.values()].filter(
+				(p: Readonly<ServerPlayer>) => p.guessOrder !== null
+			).length;
 			this.deps.send(playerId, { type: 'guessResult', correct: true });
 			this.broadcast({ type: 'playerGuessed', id: playerId });
 			this.systemChat(`${player.name} guessed the word!`);
@@ -588,7 +650,8 @@ export class Room {
 		// A wrong guess that *contains* the answer would spoil it — keep it in
 		// the post-guess channel instead of broadcasting.
 		if (guess.includes(word)) {
-			return this.sendChat({ id: playerId, name: player.name, text, scope: 'guessed' });
+			this.sendChat({ id: playerId, name: player.name, text, scope: 'guessed' });
+			return;
 		}
 
 		if (levenshtein(guess, word) === 1) {
@@ -606,10 +669,12 @@ export class Room {
 
 		if (this.phase === 'drawing' && this.turn) {
 			if (playerId === this.turn.drawerId || player.guessedThisTurn) {
-				return this.sendChat({ id: playerId, name: player.name, text, scope: 'guessed' });
+				this.sendChat({ id: playerId, name: player.name, text, scope: 'guessed' });
+				return;
 			}
 			// A not-yet-guessed player's message during drawing is always a guess.
-			return this.guess(playerId, text);
+			this.guess(playerId, text);
+			return;
 		}
 		this.sendChat({ id: playerId, name: player.name, text, scope: 'all' });
 	}
@@ -619,9 +684,9 @@ export class Room {
 			return;
 		}
 		const eligible = [...this.players.values()].filter(
-			(p) => p.id !== this.turn!.drawerId && p.connected
+			(p: Readonly<ServerPlayer>) => p.id !== this.turn!.drawerId && p.connected
 		);
-		if (eligible.every((p) => p.guessedThisTurn)) {
+		if (eligible.every((p: Readonly<ServerPlayer>) => p.guessedThisTurn)) {
 			this.endTurn('all_guessed');
 		}
 	}
@@ -642,10 +707,11 @@ export class Room {
 			return;
 		}
 
+		const lastIndex = this.ops.length - 1;
 		const last = this.ops.at(-1);
 		if (valid.kind === 'stroke' && last?.kind === 'stroke' && last.id === valid.id) {
 			if (last.points.length < 5000) {
-				last.points.push(...valid.points);
+				this.ops[lastIndex] = { ...last, points: [...last.points, ...valid.points] };
 			}
 		} else {
 			this.ops.push(valid);
@@ -654,12 +720,16 @@ export class Room {
 	}
 
 	private validateOp(op: DrawOp): DrawOp | null {
+		// op's static type is optimistic: it's really an unvalidated client-controlled payload
+		// (routed through `handleMessage`'s `msg: ClientMessage`), so despite `DrawOp` claiming
+		// these can't fail, they're the actual runtime shape check.
+		// oxlint-disable-next-line typescript/no-unnecessary-condition, typescript/strict-boolean-expressions
 		if (!op || typeof op !== 'object' || typeof op.id !== 'string' || op.id.length > 32) {
 			return null;
 		}
 		const color =
 			typeof op.color === 'string' && /^#[0-9a-f]{3,8}$/iu.test(op.color) ? op.color : null;
-		if (!color) {
+		if (color === null) {
 			return null;
 		}
 
@@ -692,15 +762,15 @@ export class Room {
 			}
 			return { kind: 'stroke', id: op.id, points, color, size };
 		}
-		if (op.kind === 'fill') {
-			const x = clamp01(op.x);
-			const y = clamp01(op.y);
-			if (x === null || y === null) {
-				return null;
-			}
-			return { kind: 'fill', id: op.id, x, y, color };
+		// Only 'stroke' | 'fill' exist on DrawOp, and 'stroke' returned unconditionally above —
+		// this is 'fill' by elimination for well-formed input, and clamp01 below rejects anything
+		// else (a malformed `op.kind`) by returning null for the missing/non-numeric x/y.
+		const x = clamp01(op.x);
+		const y = clamp01(op.y);
+		if (x === null || y === null) {
+			return null;
 		}
-		return null;
+		return { kind: 'fill', id: op.id, x, y, color };
 	}
 
 	private clearCanvas(playerId: PlayerId): void {
@@ -733,7 +803,7 @@ export class Room {
 		this.clearTurnTimers();
 
 		const gains: Record<PlayerId, number> = {};
-		if (reason !== 'drawer_left' && this.turn.word) {
+		if (reason !== 'drawer_left' && this.turn.word !== null) {
 			const timePoints: number[] = [];
 			for (const p of this.players.values()) {
 				if (!p.guessedThisTurn || p.guessedAtMs === null || p.guessOrder === null) {
@@ -744,7 +814,8 @@ export class Room {
 				gains[p.id] = time + ordinalBonus(p.guessOrder);
 			}
 			const eligible = [...this.players.values()].filter(
-				(p) => p.id !== this.turn!.drawerId && (p.connected || p.guessedThisTurn)
+				(p: Readonly<ServerPlayer>) =>
+					p.id !== this.turn!.drawerId && (p.connected || p.guessedThisTurn)
 			);
 			const drawerGain = drawerPoints(timePoints, eligible.length);
 			if (drawerGain > 0) {
@@ -775,7 +846,9 @@ export class Room {
 			endsAt: this.turn.endsAt
 		});
 		this.broadcast({ type: 'roomState', room: this.toClientRoom() });
-		this.phaseTimer = this.deps.schedule(() => this.nextTurn(), revealMs);
+		this.phaseTimer = this.deps.schedule(() => {
+			this.nextTurn();
+		}, revealMs);
 	}
 
 	private nextTurn(): void {
@@ -783,7 +856,8 @@ export class Room {
 			return;
 		}
 		if (this.advanceTurnPointer()) {
-			return this.endGame();
+			this.endGame();
+			return;
 		}
 		this.startTurn();
 	}
@@ -824,14 +898,14 @@ export class Room {
 		this.disposed = true;
 		this.clearTurnTimers();
 		for (const p of this.players.values()) {
-			if (p.graceTimer) {
+			if (p.graceTimer !== null) {
 				this.deps.cancel(p.graceTimer);
 			}
 		}
 	}
 
 	private clearTurnTimers(): void {
-		if (this.phaseTimer) {
+		if (this.phaseTimer !== null) {
 			this.deps.cancel(this.phaseTimer);
 		}
 		this.phaseTimer = null;
@@ -839,7 +913,7 @@ export class Room {
 			this.deps.cancel(t);
 		}
 		this.hintTimers = [];
-		if (this.syncTimer) {
+		if (this.syncTimer !== null) {
 			this.deps.cancel(this.syncTimer);
 		}
 		this.syncTimer = null;
@@ -893,7 +967,7 @@ export class Room {
 		}
 	}
 
-	private toClientPlayer(p: ServerPlayer): ClientPlayer {
+	private toClientPlayer(p: Readonly<ServerPlayer>): ClientPlayer {
 		return {
 			id: p.id,
 			name: p.name,
@@ -909,7 +983,9 @@ export class Room {
 		return {
 			code: this.code,
 			phase: this.phase,
-			players: [...this.players.values()].map((p) => this.toClientPlayer(p)),
+			players: [...this.players.values()].map((p: Readonly<ServerPlayer>) =>
+				this.toClientPlayer(p)
+			),
 			settings: this.settings,
 			round: this.round,
 			turnOrder: [...this.turnOrder],

@@ -5,7 +5,10 @@
  * per-letter spacing is the client's job.
  */
 
-export function maskWord(word: string, revealed: ReadonlySet<number>): string {
+// The Readonly<> wrapper around ReadonlySet is not redundant: tsgolint's
+// prefer-readonly-parameter-types check only recognizes the outer Readonly<> generic, not the
+// (already immutable) ReadonlySet interface on its own.
+export function maskWord(word: string, revealed: Readonly<ReadonlySet<number>>): string {
 	let out = '';
 	for (let i = 0; i < word.length; i++) {
 		out += word[i] === ' ' || revealed.has(i) ? word[i] : '_';
@@ -41,7 +44,8 @@ export function revealSchedule(drawMs: number, hints: number): number[] {
 /** Pick a random not-yet-revealed, non-space index; null if none remain hidden. */
 export function pickRevealIndex(
 	word: string,
-	revealed: ReadonlySet<number>,
+	// See the Readonly<> note on maskWord above.
+	revealed: Readonly<ReadonlySet<number>>,
 	random: () => number = Math.random
 ): number | null {
 	const candidates: number[] = [];

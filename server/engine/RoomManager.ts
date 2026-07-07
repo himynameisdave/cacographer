@@ -11,8 +11,8 @@ export class RoomManager {
 	rooms = new Map<string, Room>();
 
 	constructor(
-		private send: (roomCode: string, playerId: PlayerId, msg: ServerMessage) => void,
-		private makeDeps: (send: RoomDeps['send']) => RoomDeps = defaultDeps
+		private readonly send: (roomCode: string, playerId: PlayerId, msg: ServerMessage) => void,
+		private readonly makeDeps: (send: RoomDeps['send']) => RoomDeps = defaultDeps
 	) {}
 
 	create(): Room {
@@ -22,8 +22,12 @@ export class RoomManager {
 		}
 		const room = new Room(
 			code,
-			this.makeDeps((playerId, msg) => this.send(code, playerId, msg)),
-			() => this.scheduleTeardown(code)
+			this.makeDeps((playerId, msg) => {
+				this.send(code, playerId, msg);
+			}),
+			() => {
+				this.scheduleTeardown(code);
+			}
 		);
 		this.rooms.set(code, room);
 		// A freshly created room has no players yet; if nobody ever joins, GC it.

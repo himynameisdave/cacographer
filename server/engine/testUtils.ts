@@ -10,11 +10,11 @@ import {
 } from '../../src/lib/protocol';
 import { Room, type RoomDeps, type TimerHandle } from './Room';
 
-interface Task {
-	id: number;
-	at: number;
-	fn: () => void;
-}
+type Task = {
+	readonly id: number;
+	readonly at: number;
+	readonly fn: () => void;
+};
 
 export class FakeClock {
 	now = 1_000_000;
@@ -62,10 +62,10 @@ export class FakeClock {
 	}
 }
 
-export interface Sent {
-	to: PlayerId;
-	msg: ServerMessage;
-}
+export type Sent = {
+	readonly to: PlayerId;
+	readonly msg: ServerMessage;
+};
 
 /** Deterministic custom word list; with random()=0 sampleChoices returns a
  * prefix of the unused pool in this order. */
@@ -94,10 +94,17 @@ export class Harness {
 
 	constructor(code = 'TEST1') {
 		const deps: RoomDeps = {
-			send: (to, msg) => this.log.push({ to, msg: structuredClone(msg) }),
+			send: (to, msg) => {
+				this.log.push({ to, msg: structuredClone(msg) });
+			},
 			now: () => this.clock.now,
 			schedule: (fn, ms) => this.clock.schedule(fn, ms),
-			cancel: (h: TimerHandle) => this.clock.cancel(h as number),
+			cancel: (h: TimerHandle) => {
+				// TimerHandle is opaque per RoomDeps; this harness knows it's always the
+				// numeric id FakeClock.schedule returned, since it's the only schedule() in use.
+				// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see comment above
+				this.clock.cancel(h as number);
+			},
 			random: () => (this.randQueue.length > 0 ? this.randQueue.shift()! : 0)
 		};
 		this.room = new Room(code, deps, () => {
@@ -126,12 +133,17 @@ export class Harness {
 		id: PlayerId,
 		type: T
 	): Extract<ServerMessage, { type: T }>[] {
+		// TS can't narrow a generic discriminant from a runtime `.filter` predicate;
+		// the check just above is exactly what this assertion claims.
+		// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see comment above
 		return this.to(id).filter((m) => m.type === type) as Extract<ServerMessage, { type: T }>[];
 	}
 
 	ofType<T extends ServerMessage['type']>(
 		type: T
 	): { to: PlayerId; msg: Extract<ServerMessage, { type: T }> }[] {
+		// Same generic-narrowing limitation as typeTo() above.
+		// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see comment above
 		return this.log.filter((s) => s.msg.type === type) as {
 			to: PlayerId;
 			msg: Extract<ServerMessage, { type: T }>;
@@ -152,7 +164,7 @@ export class Harness {
  * host (hints off unless overridden), and the game started.
  */
 export function startedGame(
-	names: string[],
+	names: readonly string[],
 	settings: Partial<Settings> = {}
 ): { h: Harness; ids: PlayerId[] } {
 	const h = new Harness();
@@ -166,15 +178,21 @@ export function startedGame(
 }
 
 /** The most recent word choices offered to `drawer`. */
-export function choicesFor(h: Harness, drawer: PlayerId): string[] {
+// Harness is a mutable test double (log/randQueue are pushed/shifted by its own methods), so
+// it can't be typed as deeply readonly.
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- see comment above
+export function choicesFor(h: Harness, drawer: PlayerId): readonly string[] {
 	const msgs = h.typeTo(drawer, 'wordChoices');
-	if (msgs.length === 0) {
+	const last = msgs.at(-1);
+	if (last === undefined) {
 		throw new Error('no wordChoices sent to drawer');
 	}
-	return msgs.at(-1).choices;
+	return last.choices;
 }
 
 /** Choose `word` (default: the first offered choice) and return it. */
+// See the note on choicesFor above; h.send() also mutates Harness's own log via deps.send.
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- see comment above
 export function chooseWord(h: Harness, drawer: PlayerId, word?: string): string {
 	const w = word ?? choicesFor(h, drawer)[0];
 	h.send(drawer, { type: 'chooseWord', word: w });

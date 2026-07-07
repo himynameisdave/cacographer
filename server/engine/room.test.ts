@@ -13,7 +13,9 @@ describe('join', () => {
 	test('first player becomes host and receives a joined snapshot', () => {
 		const h = new Harness();
 		let registered: PlayerId | null = null;
-		const res = h.room.join('Alice', (id) => (registered = id));
+		const res = h.room.join('Alice', (id) => {
+			registered = id;
+		});
 		if (!res.ok) {
 			throw new Error('join failed');
 		}
@@ -501,7 +503,14 @@ describe('hints', () => {
 		for (const r of reveals) {
 			expect(r.masked).not.toBe(word);
 		}
-		const final = reveals.at(-1).masked;
+		const lastReveal = reveals.at(-1);
+		if (lastReveal === undefined) {
+			throw new Error('expected at least one letterRevealed message');
+		}
+		const final = lastReveal.masked;
+		// Masked words are plain lowercase letters/underscores (see mask.ts) — no
+		// multi-codepoint graphemes, so per-character spread iteration is exact here.
+		// oxlint-disable-next-line typescript/no-misused-spread -- see comment above
 		expect([...final].filter((ch) => ch === '_')).toHaveLength(1);
 	});
 });
