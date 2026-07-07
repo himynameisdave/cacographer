@@ -1,6 +1,6 @@
 {
 	"$schema": "./node_modules/oxlint/configuration_schema.json",
-	"plugins": ["typescript", "unicorn", "oxc", "import", "promise", "node"],
+	"plugins": ["typescript", "unicorn", "oxc", "import", "promise", "node", "jsdoc"],
 	"categories": {
 		"correctness": "error",
 		"suspicious": "error",
@@ -42,7 +42,49 @@
 		"import/no-nodejs-modules": "off",
 		"import/prefer-default-export": "off",
 		"typescript/parameter-properties": "off",
-		"node/no-sync": "off"
+		"node/no-sync": "off",
+		"typescript/consistent-type-definitions": ["error", "type"],
+		"unicorn/prefer-set-has": "error",
+
+		// Type-aware rules: require `--type-aware` (see package.json `lint` script) and the
+		// `oxlint-tsgolint` devDependency.
+		"typescript/prefer-readonly-parameter-types": "error",
+		"typescript/prefer-readonly": "error",
+		"typescript/no-confusing-void-expression": "error",
+		"typescript/no-unnecessary-condition": "error",
+		"typescript/no-unnecessary-type-assertion": "error",
+		"typescript/no-redundant-type-constituents": "error",
+		"typescript/no-misused-spread": "error",
+		"typescript/switch-exhaustiveness-check": "error",
+		"typescript/prefer-nullish-coalescing": "error",
+		"typescript/non-nullable-type-assertion-style": "error",
+		"typescript/prefer-regexp-exec": "error",
+
+		// oxlint's jsdoc plugin has no "require a JSDoc block exists" rule — exported functions
+		// getting a one-line description (see server/engine/scoring.ts) is a code-review
+		// expectation (CLAUDE.md), not something lint can gate. The category defaults above turn
+		// on the whole jsdoc plugin, including require-param/require-returns, which force full
+		// `@param`/`@returns` tag blocks onto every function with so much as a one-line doc
+		// comment — that would push this codebase's terse style toward verbose Javadoc-style
+		// comments CLAUDE.md explicitly avoids, so those are off. check-tag-names stays on to
+		// catch typos/unrecognized tags in whatever JSDoc already exists.
+		"jsdoc/check-tag-names": "error",
+		"jsdoc/require-param": "off",
+		"jsdoc/require-param-description": "off",
+		"jsdoc/require-param-name": "off",
+		"jsdoc/require-param-type": "off",
+		"jsdoc/require-property": "off",
+		"jsdoc/require-property-description": "off",
+		"jsdoc/require-property-name": "off",
+		"jsdoc/require-property-type": "off",
+		"jsdoc/require-returns": "off",
+		"jsdoc/require-returns-description": "off",
+		"jsdoc/require-returns-type": "off",
+		"jsdoc/require-throws-description": "off",
+		"jsdoc/require-throws-type": "off",
+		"jsdoc/require-yields": "off",
+		"jsdoc/require-yields-description": "off",
+		"jsdoc/require-yields-type": "off"
 	},
 	"overrides": [
 		{
@@ -57,6 +99,43 @@
 				"typescript/no-explicit-any": "off",
 				"typescript/no-non-null-assertion": "off",
 				"eslint/max-classes-per-file": "off"
+			}
+		},
+		{
+			// tsgolint (oxlint's type-aware backend) doesn't resolve `bun:test`'s ambient
+			// `expect`/`describe`/`test` globals, so every property access/call on them reads as
+			// an `error` type indistinguishable from a real `any` leak. Re-enable once tsgolint
+			// supports Bun's ambient types.
+			"files": ["server/engine/*.test.ts"],
+			"rules": {
+				"typescript/no-unsafe-call": "off",
+				"typescript/no-unsafe-member-access": "off"
+			}
+		},
+		{
+			"files": ["server/index.ts"],
+			"rules": {
+				// tsgolint doesn't resolve `node:fs`/`node:path`/`bun`'s ambient types in this
+				// project's tsconfig setup: every value derived from them (`process.env`, `Bun`
+				// socket data, `path.join`, ...) reads as `error`, which is indistinguishable from
+				// a real `any` leak. Re-enable once tsgolint supports them — this is the only
+				// file that touches those modules directly.
+				//
+				// `no-unnecessary-type-assertion` belongs here too: it once told us `ws.data.code!`
+				// was a redundant assertion because it couldn't resolve `ServerWebSocket<SocketData>`
+				// (from `bun`) and treated `ws.data.code` as already non-null. It's actually
+				// `string | null` — removing the `!` was a real regression caught by manually
+				// typechecking this file with `@types/bun`/`@types/node` temporarily installed,
+				// since svelte-check's tsconfig doesn't cover `server/` at all (see CLAUDE.md /
+				// README follow-up on that gap).
+				"typescript/no-unsafe-call": "off",
+				"typescript/no-unsafe-member-access": "off",
+				"typescript/no-unsafe-assignment": "off",
+				"typescript/no-unsafe-argument": "off",
+				"typescript/no-unsafe-type-assertion": "off",
+				"typescript/no-redundant-type-constituents": "off",
+				"typescript/strict-boolean-expressions": "off",
+				"typescript/no-unnecessary-type-assertion": "off"
 			}
 		}
 	]
