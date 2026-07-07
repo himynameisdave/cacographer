@@ -16,6 +16,34 @@ const CLOSE_FLASH_MS = 2500;
 const JOIN_ERRORS: ReadonlySet<ErrorCode> = new Set(['room_not_found', 'room_full', 'name_taken']);
 
 /**
+ * `protocol.ts`'s wire types are deeply `readonly` (they're immutable snapshots once sent).
+ * `GameState.room` is a live local mirror that this class patches incrementally in place —
+ * that needs its own mutable shape, converted once at the wire boundary.
+ */
+type Mutable<T> = T extends readonly [infer A, infer B]
+	? [Mutable<A>, Mutable<B>]
+	: T extends readonly (infer U)[]
+		? Mutable<U>[]
+		: T extends object
+			? { -readonly [K in keyof T]: Mutable<T[K]> }
+			: T;
+
+/** Every wire payload is freshly deserialized per message with no other holder of the
+ * reference, so treating it as an exclusively-owned mutable copy is safe. */
+function toMutable<T>(value: T): Mutable<T> {
+	// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see comment above
+	return value as Mutable<T>;
+}
+
+/** Without `noUncheckedIndexedAccess`, `Record` access types as always-present; a player
+ * who joined mid-round is genuinely absent from an earlier turn's `totals`. The explicit
+ * `| undefined` return type (rather than relying on the plain index access) is what makes
+ * the presence check at call sites meaningful to the type checker. */
+function scoreFor(totals: Readonly<Record<PlayerId, number>>, id: PlayerId): number | undefined {
+	return totals[id];
+}
+
+/**
  * Client-side mirror of the room, maintained incrementally from server
  * messages. `roomState` broadcasts are the resync source of truth — every
  * phase change carries one, so incremental patches only need to be
@@ -23,10 +51,10 @@ const JOIN_ERRORS: ReadonlySet<ErrorCode> = new Set(['room_not_found', 'room_ful
  */
 export class GameState {
 	you = $state<PlayerId | null>(null);
-	room = $state<ClientRoom | null>(null);
+	room = $state<Mutable<ClientRoom> | null>(null);
 	chat = $state<ChatEntry[]>([]);
 	/** Word choices — only ever populated at the drawer, during 'choosing'. */
-	choices = $state<{ words: string[]; endsAt: number } | null>(null);
+	choices = $state<{ words: readonly string[]; endsAt: number } | null>(null);
 	/** The secret word — only ever populated at the drawer, during 'drawing'. */
 	word = $state<string | null>(null);
 	/** Briefly true after an almost-correct guess ("So close!"). */
@@ -64,7 +92,7 @@ export class GameState {
 		switch (msg.type) {
 			case 'joined': {
 				this.you = msg.you;
-				this.room = msg.room;
+				this.room = toMutable(msg.room);
 				this.fatalError = null;
 				// If we're the drawer and we dropped, the server ended our turn —
 				// stale secrets from a previous connection can't apply anymore.
@@ -74,7 +102,7 @@ export class GameState {
 			}
 
 			case 'roomState': {
-				this.room = msg.room;
+				this.room = toMutable(msg.room);
 				if (msg.room.phase !== 'choosing') {
 					this.choices = null;
 				}
@@ -180,7 +208,7 @@ export class GameState {
 
 			case 'canvasState': {
 				if (this.room) {
-					this.room.ops = msg.ops;
+					this.room.ops = toMutable(msg.ops);
 				}
 				break;
 			}
@@ -193,7 +221,7 @@ export class GameState {
 			}
 
 			case 'guessResult': {
-				if (!msg.correct && msg.close) {
+				if (!msg.correct && msg.close === true) {
 					this.closeFlash = true;
 					if (this.closeFlashTimer !== null) {
 						clearTimeout(this.closeFlashTimer);
@@ -239,7 +267,7 @@ export class GameState {
 				room.lastGains = msg.gains;
 				room.endsAt = msg.endsAt;
 				for (const p of room.players) {
-					const total = msg.totals[p.id];
+					const total = scoreFor(msg.totals, p.id);
 					if (total !== undefined) {
 						p.score = total;
 					}
@@ -258,7 +286,7 @@ export class GameState {
 				room.winnerId = msg.winnerId;
 				room.endsAt = null;
 				for (const p of room.players) {
-					const total = msg.totals[p.id];
+					const total = scoreFor(msg.totals, p.id);
 					if (total !== undefined) {
 						p.score = total;
 					}
@@ -292,9 +320,9 @@ export class GameState {
 		}
 		const last = room.ops.at(-1);
 		if (op.kind === 'stroke' && last?.kind === 'stroke' && last.id === op.id) {
-			last.points.push(...op.points);
+			last.points.push(...op.points.map((p): [number, number] => [p[0], p[1]]));
 		} else {
-			room.ops.push(op);
+			room.ops.push(toMutable(op));
 		}
 	}
 }

@@ -1,11 +1,11 @@
 <script lang="ts">
 	import  { type Phase } from '$lib/protocol';
 
-	interface Props {
+	type Props = {
 		masked: string | null;
 		word: string | null; // drawer only
 		phase: Phase;
-	}
+	};
 
 	const { masked, word, phase }: Props = $props();
 
