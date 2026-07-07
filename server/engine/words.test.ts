@@ -8,7 +8,7 @@ function settings(partial: Partial<Settings>): Settings {
 	return { ...structuredClone(DEFAULT_SETTINGS), ...partial };
 }
 
-const builtinNormalized = new Set((builtin as string[]).map((w) => normalize(w)));
+const builtinNormalized = new Set(builtin.map((w) => normalize(w)));
 
 describe('buildWordPool', () => {
 	test('builtin source includes builtin words and ignores customWords', () => {
