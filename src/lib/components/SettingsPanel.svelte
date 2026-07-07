@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { LIMITS, SETTINGS_BOUNDS, type Settings } from '$lib/protocol';
 
-	interface Props {
+	type Props = {
 		settings: Settings;
 		isHost: boolean;
 		onupdate: (partial: Partial<Settings>) => void;
-	}
+	};
 
 	const { settings, isHost, onupdate }: Props = $props();
 

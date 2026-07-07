@@ -3,14 +3,14 @@
 
 	type Tool = 'pen' | 'fill' | 'eraser';
 
-	interface Props {
+	type Props = {
 		ops: DrawOp[];
 		canDraw: boolean;
 		color: string;
 		size: number;
 		tool: Tool;
 		onop: (op: DrawOp) => void;
-	}
+	};
 
 	const { ops, canDraw, color, size, tool, onop }: Props = $props();
 

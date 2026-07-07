@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { LIMITS, type ChatEntry } from '$lib/protocol';
 
-	interface Props {
+	type Props = {
 		entries: ChatEntry[];
 		placeholder?: string;
 		disabled?: boolean;
 		onsend: (text: string) => void;
-	}
+	};
 
 	const { entries, placeholder = 'Say something…', disabled = false, onsend }: Props = $props();
 

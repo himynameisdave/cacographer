@@ -1,11 +1,11 @@
 <script lang="ts">
 	import  { type ClientPlayer, type PlayerId } from '$lib/protocol';
 
-	interface Props {
+	type Props = {
 		players: ClientPlayer[];
 		you: PlayerId | null;
 		drawerId: PlayerId | null;
-	}
+	};
 
 	const { players, you, drawerId }: Props = $props();
 

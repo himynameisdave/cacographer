@@ -2,10 +2,10 @@ import { type ClientMessage, type ServerMessage } from '$lib/protocol';
 
 export type SocketStatus = 'connecting' | 'open' | 'closed' | 'reconnecting';
 
-export interface GameSocketHandlers {
+export type GameSocketHandlers = {
 	onMessage: (msg: ServerMessage) => void;
 	onStatus: (status: SocketStatus) => void;
-}
+};
 
 const BACKOFF_START_MS = 500;
 const BACKOFF_MAX_MS = 8000;
@@ -23,8 +23,8 @@ export class GameSocket {
 	private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
 	constructor(
-		private url: string,
-		private handlers: GameSocketHandlers
+		private readonly url: string,
+		private readonly handlers: Readonly<GameSocketHandlers>
 	) {}
 
 	connect(): void {
@@ -63,13 +63,17 @@ export class GameSocket {
 			this.handlers.onStatus('open');
 		});
 
-		ws.addEventListener('message', (ev) => {
+		ws.addEventListener('message', (ev: Pick<MessageEvent, 'data'>) => {
 			if (ws !== this.ws) {
 				return;
 			}
 			let msg: ServerMessage;
 			try {
-				msg = JSON.parse(String(ev.data));
+				// The server is the sole authority (CLAUDE.md); no client-side runtime
+				// validation of the wire payload is done today, so this cast is a trust
+				// boundary rather than a real type guarantee.
+				// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see comment above
+				msg = JSON.parse(String(ev.data)) as ServerMessage;
 			} catch {
 				return; // ignore malformed frames
 			}
