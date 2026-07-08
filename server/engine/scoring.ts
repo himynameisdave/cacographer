@@ -22,7 +22,7 @@ export function ordinalBonus(order: number): number {
  * excluded so drawer pay reflects drawing quality, not guesser race position),
  * plus a sweep bonus when every eligible guesser got the word.
  */
-export function drawerPoints(timePoints: number[], eligibleCount: number): number {
+export function drawerPoints(timePoints: readonly number[], eligibleCount: number): number {
 	if (timePoints.length === 0) {
 		return 0;
 	}

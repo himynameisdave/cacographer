@@ -11,10 +11,10 @@ import { RoomManager } from './engine/RoomManager';
 
 const PORT = Number(process.env.PORT ?? 3001);
 
-interface SocketData {
+type SocketData = {
 	code: string | null;
 	playerId: string | null;
-}
+};
 
 type Socket = ServerWebSocket<SocketData>;
 
@@ -38,16 +38,16 @@ function sendTo(ws: Socket, msg: ServerMessage): void {
 // Rate limiting — simple token buckets refilled by timestamp
 // ---------------------------------------------------------------------------
 
-interface Bucket {
+type Bucket = {
 	tokens: number;
 	last: number;
-}
+};
 
-interface Buckets {
+type Buckets = {
 	draw: Bucket;
 	text: Bucket;
 	other: Bucket;
-}
+};
 
 const bucketsBySocket = new WeakMap<Socket, Buckets>();
 
@@ -65,6 +65,8 @@ function bucketsFor(ws: Socket): Buckets {
 	return b;
 }
 
+// bucket.tokens/last are reassigned below (refill + spend), so this can't be Readonly<Bucket>.
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- see comment above
 function take(bucket: Bucket, ratePerSec: number, burst: number): boolean {
 	const now = Date.now();
 	bucket.tokens = Math.min(burst, bucket.tokens + ((now - bucket.last) / 1000) * ratePerSec);
@@ -138,6 +140,10 @@ function json(body: unknown, status = 200): Response {
 	});
 }
 
+// Request is read-only here (only .url/.method are read), but its nested Headers/
+// ReadableStream/AbortSignal members are inherently mutable classes, so no wrapper can make it
+// deeply readonly.
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- see comment above
 function fetchHandler(req: Request, server: Server): Response | undefined {
 	const url = new URL(req.url);
 	const { pathname } = url;
@@ -152,7 +158,7 @@ function fetchHandler(req: Request, server: Server): Response | undefined {
 			return json({ code: room.code });
 		}
 
-		const roomMatch = pathname.match(/^\/api\/rooms\/(?<code>[^/]+)$/u);
+		const roomMatch = /^\/api\/rooms\/(?<code>[^/]+)$/u.exec(pathname);
 		if (req.method === 'GET' && roomMatch?.groups) {
 			const room = manager.get(roomMatch.groups.code);
 			if (!room) {
@@ -191,7 +197,7 @@ function fetchHandler(req: Request, server: Server): Response | undefined {
 
 const MAX_MESSAGE_BYTES = 64 * 1024;
 
-function handleJoin(ws: Socket, msg: Record<string, unknown>): void {
+function handleJoin(ws: Socket, msg: Readonly<Record<string, unknown>>): void {
 	if (msg.type !== 'join' || typeof msg.code !== 'string' || typeof msg.name !== 'string') {
 		sendTo(ws, { type: 'error', code: 'bad_message', message: 'Expected a join message' });
 		return;
@@ -232,6 +238,8 @@ function messageHandler(ws: Socket, raw: string | Buffer): void {
 		sendTo(ws, { type: 'error', code: 'bad_message', message: 'Invalid JSON' });
 		return;
 	}
+	// msg's static type is optimistic; JSON.parse can actually return null/non-objects here.
+	// oxlint-disable-next-line typescript/no-unnecessary-condition -- see comment above
 	if (!msg || typeof msg !== 'object' || typeof msg.type !== 'string') {
 		sendTo(ws, { type: 'error', code: 'bad_message', message: 'Malformed message' });
 		return;
@@ -239,7 +247,7 @@ function messageHandler(ws: Socket, raw: string | Buffer): void {
 
 	// Not joined yet: the only acceptable message is 'join'.
 	if (ws.data.playerId === null) {
-		handleJoin(ws, msg as unknown as Record<string, unknown>);
+		handleJoin(ws, msg);
 		return;
 	}
 
@@ -260,6 +268,9 @@ function messageHandler(ws: Socket, raw: string | Buffer): void {
 		} // silently drop
 	}
 
+	// data.code is set by handleJoin before this point is ever reached (see the early return
+	// on ws.data.playerId === null above); tsgolint can't resolve Bun's ServerWebSocket<T>
+	// generic (see the file-level oxlintrc override) so it misjudges this assertion as unnecessary.
 	manager.get(ws.data.code!)?.handleMessage(ws.data.playerId, msg);
 }
 
@@ -269,6 +280,7 @@ function closeHandler(ws: Socket): void {
 	// the OLD socket's close must not disconnect the player.
 	if (ws.data.playerId && registry.get(key) === ws) {
 		registry.delete(key);
+		// See the comment on the equivalent call in messageHandler above.
 		manager.get(ws.data.code!)?.disconnect(ws.data.playerId);
 	}
 }

@@ -7,15 +7,15 @@ export type PlayerId = string;
 
 export type Phase = 'lobby' | 'choosing' | 'drawing' | 'reveal' | 'finished';
 
-export interface Settings {
-	rounds: number; // 1–10
-	drawTimeSeconds: number; // 30–180
-	wordChoiceCount: number; // 2–5
-	hintCount: number; // 0+ (capped per-word at length − 1)
-	maxPlayers: number; // 2–12
-	wordSource: 'builtin' | 'custom' | 'both';
-	customWords: string[];
-}
+export type Settings = {
+	readonly rounds: number; // 1–10
+	readonly drawTimeSeconds: number; // 30–180
+	readonly wordChoiceCount: number; // 2–5
+	readonly hintCount: number; // 0+ (capped per-word at length − 1)
+	readonly maxPlayers: number; // 2–12
+	readonly wordSource: 'builtin' | 'custom' | 'both';
+	readonly customWords: readonly string[];
+};
 
 export const DEFAULT_SETTINGS: Settings = {
 	rounds: 3,
@@ -33,94 +33,116 @@ export const CANVAS_WIDTH = 800;
 export const CANVAS_HEIGHT = 450;
 
 export type DrawOp =
-	| { kind: 'stroke'; id: string; points: [number, number][]; color: string; size: number }
-	| { kind: 'fill'; id: string; x: number; y: number; color: string };
+	| {
+			readonly kind: 'stroke';
+			readonly id: string;
+			readonly points: readonly (readonly [number, number])[];
+			readonly color: string;
+			readonly size: number;
+	  }
+	| {
+			readonly kind: 'fill';
+			readonly id: string;
+			readonly x: number;
+			readonly y: number;
+			readonly color: string;
+	  };
 
-export interface ClientPlayer {
-	id: PlayerId;
-	name: string;
-	score: number;
-	isHost: boolean;
-	connected: boolean;
-	guessedThisTurn: boolean;
-}
+export type ClientPlayer = {
+	readonly id: PlayerId;
+	readonly name: string;
+	readonly score: number;
+	readonly isHost: boolean;
+	readonly connected: boolean;
+	readonly guessedThisTurn: boolean;
+};
 
 /** Recipient-safe projection of a Room. Never contains the secret word or the
  * drawer's choices — those travel only via `yourWord` / `wordChoices`. */
-export interface ClientRoom {
-	code: string;
-	phase: Phase;
-	players: ClientPlayer[];
-	settings: Settings;
-	round: number;
-	turnOrder: PlayerId[];
-	turnIndex: number;
-	drawerId: PlayerId | null;
-	masked: string | null;
-	endsAt: number | null;
-	ops: DrawOp[];
-	lastWord: string | null;
-	lastGains: Record<PlayerId, number> | null;
-	winnerId: PlayerId | null;
-}
+export type ClientRoom = {
+	readonly code: string;
+	readonly phase: Phase;
+	readonly players: readonly ClientPlayer[];
+	readonly settings: Settings;
+	readonly round: number;
+	readonly turnOrder: readonly PlayerId[];
+	readonly turnIndex: number;
+	readonly drawerId: PlayerId | null;
+	readonly masked: string | null;
+	readonly endsAt: number | null;
+	readonly ops: readonly DrawOp[];
+	readonly lastWord: string | null;
+	readonly lastGains: Readonly<Record<PlayerId, number>> | null;
+	readonly winnerId: PlayerId | null;
+};
 
 export type ChatScope = 'all' | 'guessed' | 'system';
 
-export interface ChatEntry {
-	id: PlayerId | null; // null for system
-	name: string;
-	text: string;
-	scope: ChatScope;
-}
+export type ChatEntry = {
+	readonly id: PlayerId | null; // null for system
+	readonly name: string;
+	readonly text: string;
+	readonly scope: ChatScope;
+};
 
 // ---------------------------------------------------------------------------
 // Client → Server
 // ---------------------------------------------------------------------------
 
 export type ClientMessage =
-	| { type: 'join'; code: string; name: string }
-	| { type: 'updateSettings'; settings: Partial<Settings> }
-	| { type: 'startGame' }
-	| { type: 'chooseWord'; word: string }
-	| { type: 'draw'; op: DrawOp } // stroke batches share op.id; server appends
-	| { type: 'clearCanvas' }
-	| { type: 'undo' }
-	| { type: 'guess'; text: string }
-	| { type: 'chat'; text: string }
-	| { type: 'playAgain' };
+	| { readonly type: 'join'; readonly code: string; readonly name: string }
+	| { readonly type: 'updateSettings'; readonly settings: Partial<Settings> }
+	| { readonly type: 'startGame' }
+	| { readonly type: 'chooseWord'; readonly word: string }
+	| { readonly type: 'draw'; readonly op: DrawOp } // stroke batches share op.id; server appends
+	| { readonly type: 'clearCanvas' }
+	| { readonly type: 'undo' }
+	| { readonly type: 'guess'; readonly text: string }
+	| { readonly type: 'chat'; readonly text: string }
+	| { readonly type: 'playAgain' };
 
 // ---------------------------------------------------------------------------
 // Server → Client
 // ---------------------------------------------------------------------------
 
 export type ServerMessage =
-	| { type: 'joined'; you: PlayerId; room: ClientRoom }
-	| { type: 'roomState'; room: ClientRoom }
-	| { type: 'playerJoined'; player: ClientPlayer }
-	| { type: 'playerLeft'; id: PlayerId }
-	| { type: 'playerConnection'; id: PlayerId; connected: boolean }
-	| { type: 'hostChanged'; hostId: PlayerId }
-	| { type: 'turnStarted'; drawerId: PlayerId; round: number; turnIndex: number; endsAt: number }
-	| { type: 'wordChoices'; choices: string[]; endsAt: number } // drawer only
-	| { type: 'drawingStarted'; masked: string; endsAt: number }
-	| { type: 'yourWord'; word: string } // drawer only
-	| { type: 'draw'; op: DrawOp }
-	| { type: 'clearCanvas' }
-	| { type: 'canvasState'; ops: DrawOp[] } // full resync (undo, reconnect)
-	| { type: 'letterRevealed'; masked: string }
-	| { type: 'guessResult'; correct: boolean; close?: boolean } // to the guesser only
-	| { type: 'playerGuessed'; id: PlayerId }
-	| { type: 'chat'; entry: ChatEntry }
-	| { type: 'timeSync'; endsAt: number }
+	| { readonly type: 'joined'; readonly you: PlayerId; readonly room: ClientRoom }
+	| { readonly type: 'roomState'; readonly room: ClientRoom }
+	| { readonly type: 'playerJoined'; readonly player: ClientPlayer }
+	| { readonly type: 'playerLeft'; readonly id: PlayerId }
+	| { readonly type: 'playerConnection'; readonly id: PlayerId; readonly connected: boolean }
+	| { readonly type: 'hostChanged'; readonly hostId: PlayerId }
 	| {
-			type: 'turnEnded';
-			word: string;
-			gains: Record<PlayerId, number>;
-			totals: Record<PlayerId, number>;
-			endsAt: number;
+			readonly type: 'turnStarted';
+			readonly drawerId: PlayerId;
+			readonly round: number;
+			readonly turnIndex: number;
+			readonly endsAt: number;
 	  }
-	| { type: 'gameEnded'; totals: Record<PlayerId, number>; winnerId: PlayerId }
-	| { type: 'error'; code: ErrorCode; message: string };
+	| { readonly type: 'wordChoices'; readonly choices: readonly string[]; readonly endsAt: number } // drawer only
+	| { readonly type: 'drawingStarted'; readonly masked: string; readonly endsAt: number }
+	| { readonly type: 'yourWord'; readonly word: string } // drawer only
+	| { readonly type: 'draw'; readonly op: DrawOp }
+	| { readonly type: 'clearCanvas' }
+	| { readonly type: 'canvasState'; readonly ops: readonly DrawOp[] } // full resync (undo, reconnect)
+	| { readonly type: 'letterRevealed'; readonly masked: string }
+	| { readonly type: 'guessResult'; readonly correct: boolean; readonly close?: boolean } // to the guesser only
+	| { readonly type: 'playerGuessed'; readonly id: PlayerId }
+	| { readonly type: 'chat'; readonly entry: ChatEntry }
+	| { readonly type: 'timeSync'; readonly endsAt: number }
+	| {
+			readonly type: 'turnEnded';
+			readonly word: string;
+			readonly gains: Readonly<Record<PlayerId, number>>;
+			readonly totals: Readonly<Record<PlayerId, number>>;
+			readonly endsAt: number;
+	  }
+	| {
+			readonly type: 'gameEnded';
+			readonly totals: Readonly<Record<PlayerId, number>>;
+			readonly winnerId: PlayerId;
+	  }
+	| { readonly type: 'error'; readonly code: ErrorCode; readonly message: string };
 
 export type ErrorCode =
 	| 'room_not_found'

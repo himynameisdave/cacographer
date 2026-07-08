@@ -6,7 +6,7 @@ import { type Settings } from '../../src/lib/protocol';
 export function buildWordPool(settings: Settings): string[] {
 	const pool = new Set<string>();
 	if (settings.wordSource !== 'custom') {
-		for (const w of builtin as string[]) {
+		for (const w of builtin) {
 			pool.add(normalize(w));
 		}
 	}
@@ -28,7 +28,9 @@ export function buildWordPool(settings: Settings): string[] {
  * is cleared and words may repeat rather than the game stalling.
  */
 export function sampleChoices(
-	pool: string[],
+	pool: readonly string[],
+	// Mutated via used.clear() below when the pool runs dry, so this must stay a mutable Set.
+	// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- see comment above
 	used: Set<string>,
 	count: number,
 	random: () => number = Math.random
