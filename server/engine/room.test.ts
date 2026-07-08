@@ -871,6 +871,109 @@ describe('draw ops', () => {
 			expect(state[0].ops).toHaveLength(1);
 		}
 	});
+
+	test('redo restores the last undone op', () => {
+		const { h, a, b } = drawingPair();
+		h.send(a, {
+			type: 'draw',
+			op: { kind: 'stroke', id: 's1', points: [[0.1, 0.1]], color: '#000000', size: 4 }
+		});
+		h.send(a, { type: 'draw', op: { kind: 'fill', id: 'f1', x: 0.5, y: 0.5, color: '#00ff00' } });
+		h.send(a, { type: 'undo' });
+		h.clear();
+		h.send(a, { type: 'redo' });
+
+		expect(h.room.ops).toHaveLength(2);
+		expect(h.room.ops[1].kind).toBe('fill');
+		for (const id of [a, b]) {
+			const state = h.typeTo(id, 'canvasState');
+			expect(state).toHaveLength(1);
+			expect(state[0].ops).toHaveLength(2);
+		}
+	});
+
+	test('redo on empty redo stack is a no-op', () => {
+		const { h, a } = drawingPair();
+		h.send(a, {
+			type: 'draw',
+			op: { kind: 'stroke', id: 's1', points: [[0.1, 0.1]], color: '#000000', size: 4 }
+		});
+		h.clear();
+		h.send(a, { type: 'redo' });
+
+		expect(h.room.ops).toHaveLength(1);
+		expect(h.typeTo(a, 'canvasState')).toHaveLength(0);
+	});
+
+	test('new draw op clears the redo stack', () => {
+		const { h, a } = drawingPair();
+		h.send(a, {
+			type: 'draw',
+			op: { kind: 'stroke', id: 's1', points: [[0.1, 0.1]], color: '#000000', size: 4 }
+		});
+		h.send(a, { type: 'undo' });
+		h.send(a, {
+			type: 'draw',
+			op: { kind: 'stroke', id: 's2', points: [[0.2, 0.2]], color: '#ff0000', size: 4 }
+		});
+		h.clear();
+		h.send(a, { type: 'redo' });
+
+		expect(h.room.ops).toHaveLength(1);
+		expect(h.room.ops[0].id).toBe('s2');
+		expect(h.typeTo(a, 'canvasState')).toHaveLength(0);
+	});
+
+	test('clearCanvas clears the redo stack', () => {
+		const { h, a } = drawingPair();
+		h.send(a, {
+			type: 'draw',
+			op: { kind: 'stroke', id: 's1', points: [[0.1, 0.1]], color: '#000000', size: 4 }
+		});
+		h.send(a, { type: 'undo' });
+		h.send(a, { type: 'clearCanvas' });
+		h.clear();
+		h.send(a, { type: 'redo' });
+
+		expect(h.room.ops).toHaveLength(0);
+		expect(h.typeTo(a, 'canvasState')).toHaveLength(0);
+	});
+
+	test('redo stack is capped at 3', () => {
+		const { h, a } = drawingPair();
+		for (let i = 0; i < 5; i++) {
+			h.send(a, {
+				type: 'draw',
+				op: { kind: 'stroke', id: `s${i}`, points: [[0.1, 0.1]], color: '#000000', size: 4 }
+			});
+		}
+		for (let i = 0; i < 5; i++) {
+			h.send(a, { type: 'undo' });
+		}
+		h.clear();
+
+		// Only 3 redos should work
+		for (let i = 0; i < 4; i++) {
+			h.send(a, { type: 'redo' });
+		}
+
+		expect(h.room.ops).toHaveLength(3);
+	});
+
+	test('non-drawer cannot redo', () => {
+		const { h, a, b } = drawingPair();
+		h.send(a, {
+			type: 'draw',
+			op: { kind: 'stroke', id: 's1', points: [[0.1, 0.1]], color: '#000000', size: 4 }
+		});
+		h.send(a, { type: 'undo' });
+		h.clear();
+		h.send(b, { type: 'redo' });
+
+		expect(h.room.ops).toHaveLength(0);
+		expect(h.typeTo(a, 'canvasState')).toHaveLength(0);
+		expect(h.typeTo(b, 'canvasState')).toHaveLength(0);
+	});
 });
 
 // ---------------------------------------------------------------------------
