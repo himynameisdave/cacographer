@@ -2,10 +2,11 @@
  * Canvas painting for draw-op logs, shared by the live game canvas and the
  * end-of-game gallery thumbnails. Everything paints at the fixed logical
  * resolution (CANVAS_WIDTH × CANVAS_HEIGHT) — callers scale via CSS.
+ *
+ * Painting works by mutating the passed 2d context in place; there is no
+ * readonly CanvasRenderingContext2D, so every painter's `ctx` parameter
+ * carries a prefer-readonly-parameter-types disable.
  */
-/* Painting works by mutating the passed 2d context in place; there is no readonly
-   CanvasRenderingContext2D that could satisfy prefer-readonly-parameter-types. */
-/* oxlint-disable typescript/prefer-readonly-parameter-types -- see comment above */
 import { CANVAS_HEIGHT, CANVAS_WIDTH, type DrawOp } from '$lib/protocol';
 
 const W = CANVAS_WIDTH;
@@ -13,6 +14,7 @@ const H = CANVAS_HEIGHT;
 const FILL_TOLERANCE = 32;
 
 /** Paint one op onto the context. */
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- see module doc comment
 export function paintOp(ctx: CanvasRenderingContext2D, op: DrawOp): void {
 	if (op.kind === 'stroke') {
 		paintStroke(ctx, op, 0);
@@ -22,6 +24,7 @@ export function paintOp(ctx: CanvasRenderingContext2D, op: DrawOp): void {
 }
 
 /** Repaint a whole op log from scratch: white canvas, then every op in order. */
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- see module doc comment
 export function replayOps(ctx: CanvasRenderingContext2D, ops: readonly DrawOp[]): void {
 	ctx.fillStyle = '#ffffff';
 	ctx.fillRect(0, 0, W, H);
@@ -32,6 +35,7 @@ export function replayOps(ctx: CanvasRenderingContext2D, ops: readonly DrawOp[])
 
 /** Paint a stroke's points from index `from` onward (0 = whole stroke). */
 export function paintStroke(
+	// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- see module doc comment
 	ctx: CanvasRenderingContext2D,
 	op: Extract<DrawOp, { kind: 'stroke' }>,
 	from: number
@@ -73,6 +77,7 @@ function hexToRgb(hex: string): [number, number, number] {
 }
 
 /** Scanline flood fill at normalized (nx, ny), tolerance per channel. */
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- see module doc comment
 function paintFill(ctx: CanvasRenderingContext2D, nx: number, ny: number, fillColor: string): void {
 	const sx = Math.min(W - 1, Math.max(0, Math.round(nx * W)));
 	const sy = Math.min(H - 1, Math.max(0, Math.round(ny * H)));
