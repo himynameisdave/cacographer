@@ -125,9 +125,14 @@
 
 	function onKeyDown(e: KeyboardEvent): void {
 		if (!canDraw || !socket) return;
-		if (e.key === 'z' && (e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey) {
-			e.preventDefault();
-			socket.send({ type: 'undo' });
+		if ((e.metaKey || e.ctrlKey) && !e.altKey) {
+			if (e.key === 'z' && !e.shiftKey) {
+				e.preventDefault();
+				socket.send({ type: 'undo' });
+			} else if ((e.key === 'z' && e.shiftKey) || e.key === 'y') {
+				e.preventDefault();
+				socket.send({ type: 'redo' });
+			}
 		}
 	}
 
@@ -367,6 +372,9 @@
 							>
 							<button class="tool-btn" title="Undo" onclick={() => socket?.send({ type: 'undo' })}
 								>↩️</button
+							>
+							<button class="tool-btn" title="Redo" onclick={() => socket?.send({ type: 'redo' })}
+								>↪️</button
 							>
 							<button
 								class="tool-btn"
