@@ -123,6 +123,14 @@
 		socket?.send({ type: 'updateSettings', settings: partial });
 	}
 
+	function onKeyDown(e: KeyboardEvent): void {
+		if (!canDraw || !socket) return;
+		if (e.key === 'z' && (e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey) {
+			e.preventDefault();
+			socket.send({ type: 'undo' });
+		}
+	}
+
 	async function copyLink(): Promise<void> {
 		try {
 			await navigator.clipboard.writeText(location.href);
@@ -133,6 +141,8 @@
 		}
 	}
 </script>
+
+<svelte:window onkeydown={onKeyDown} />
 
 <svelte:head>
 	<title>{code ? `${code} · ` : ''}Cacographer</title>
