@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { CANVAS_HEIGHT, CANVAS_WIDTH, type DrawOp } from '$lib/protocol';
+	import { paintOp, paintStroke, replayOps } from '$lib/render';
 
 	type Tool = 'pen' | 'fill' | 'eraser';
 
@@ -17,7 +18,6 @@
 	const W = CANVAS_WIDTH;
 	const H = CANVAS_HEIGHT;
 	const FLUSH_MS = 40;
-	const FILL_TOLERANCE = 32;
 
 	let canvasEl = $state<HTMLCanvasElement>();
 	let ctx: CanvasRenderingContext2D | null = null;
@@ -67,9 +67,7 @@
 
 	function fullRepaint(): void {
 		if (!ctx) {return;}
-		ctx.fillStyle = '#ffffff';
-		ctx.fillRect(0, 0, W, H);
-		for (const op of ops) {paintOp(op);}
+		replayOps(ctx, ops);
 		syncPainted();
 	}
 
@@ -78,119 +76,11 @@
 		if (paintedOps > 0) {
 			const tail = ops[paintedOps - 1];
 			if (tail?.kind === 'stroke' && tail.points.length > paintedLastPoints) {
-				paintStroke(tail, paintedLastPoints);
+				paintStroke(ctx, tail, paintedLastPoints);
 			}
 		}
-		for (let i = paintedOps; i < ops.length; i++) {paintOp(ops[i]);}
+		for (let i = paintedOps; i < ops.length; i++) {paintOp(ctx, ops[i]);}
 		syncPainted();
-	}
-
-	function paintOp(op: DrawOp): void {
-		if (op.kind === 'stroke') {paintStroke(op, 0);}
-		else {paintFill(op.x, op.y, op.color);}
-	}
-
-	/** Paint a stroke's points from index `from` onward (0 = whole stroke). */
-	function paintStroke(op: Extract<DrawOp, { kind: 'stroke' }>, from: number): void {
-		if (!ctx) {return;}
-		const pts = op.points;
-		if (pts.length === 0) {return;}
-		ctx.strokeStyle = op.color;
-		ctx.fillStyle = op.color;
-		ctx.lineWidth = op.size;
-		ctx.lineCap = 'round';
-		ctx.lineJoin = 'round';
-		if (pts.length === 1) {
-			ctx.beginPath();
-			ctx.arc(pts[0][0] * W, pts[0][1] * H, op.size / 2, 0, Math.PI * 2);
-			ctx.fill();
-			return;
-		}
-		const start = Math.max(1, from);
-		if (start >= pts.length) {return;}
-		ctx.beginPath();
-		ctx.moveTo(pts[start - 1][0] * W, pts[start - 1][1] * H);
-		for (let i = start; i < pts.length; i++) {
-			ctx.lineTo(pts[i][0] * W, pts[i][1] * H);
-		}
-		ctx.stroke();
-	}
-
-	// ---- Flood fill -----------------------------------------------------------
-
-	function hexToRgb(hex: string): [number, number, number] {
-		let h = hex.replace('#', '');
-		if (h.length === 3 || h.length === 4) {
-			h = `${h[0]}${h[0]}${h[1]}${h[1]}${h[2]}${h[2]}`;
-		}
-		const n = Number.parseInt(h.slice(0, 6), 16);
-		return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-	}
-
-	/** Scanline flood fill at normalized (nx, ny), tolerance per channel. */
-	function paintFill(nx: number, ny: number, fillColor: string): void {
-		if (!ctx) {return;}
-		const sx = Math.min(W - 1, Math.max(0, Math.round(nx * W)));
-		const sy = Math.min(H - 1, Math.max(0, Math.round(ny * H)));
-		const img = ctx.getImageData(0, 0, W, H);
-		const {data} = img;
-		const [fr, fg, fb] = hexToRgb(fillColor);
-		const si = (sy * W + sx) * 4;
-		const tr = data[si];
-		const tg = data[si + 1];
-		const tb = data[si + 2];
-		// Filling with (roughly) the color already there would loop forever.
-		if (
-			Math.abs(tr - fr) <= FILL_TOLERANCE &&
-			Math.abs(tg - fg) <= FILL_TOLERANCE &&
-			Math.abs(tb - fb) <= FILL_TOLERANCE
-		) {
-			return;
-		}
-		const match = (i: number) =>
-			Math.abs(data[i] - tr) <= FILL_TOLERANCE &&
-			Math.abs(data[i + 1] - tg) <= FILL_TOLERANCE &&
-			Math.abs(data[i + 2] - tb) <= FILL_TOLERANCE;
-
-		const stack: number[] = [sx, sy];
-		// Track a span-neighbor row: push a seed only once per contiguous run.
-		const trackSpan = (matches: boolean, active: boolean, px: number, py: number): boolean => {
-			if (!matches) {
-				return false;
-			}
-			if (!active) {
-				stack.push(px, py);
-			}
-			return true;
-		};
-		let guard = W * H * 4; // safety cap on iterations
-		while (stack.length > 0 && guard-- > 0) {
-			const y = stack.pop()!;
-			let x = stack.pop()!;
-			let i = (y * W + x) * 4;
-			if (!match(i)) {continue;}
-			while (x > 0 && match(i - 4)) {
-				x--;
-				i -= 4;
-			}
-			let spanUp = false;
-			let spanDown = false;
-			while (x < W && match(i)) {
-				data[i] = fr;
-				data[i + 1] = fg;
-				data[i + 2] = fb;
-				data[i + 3] = 255;
-				if (y > 0) {
-					spanUp = trackSpan(match(i - W * 4), spanUp, x, y - 1);
-				}
-				if (y < H - 1) {
-					spanDown = trackSpan(match(i + W * 4), spanDown, x, y + 1);
-				}
-				x++;
-				i += 4;
-			}
-		}
-		ctx.putImageData(img, 0, 0);
 	}
 
 	// ---- Input ------------------------------------------------------------------
