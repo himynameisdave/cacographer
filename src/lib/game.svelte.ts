@@ -5,7 +5,8 @@ import {
 	type DrawOp,
 	type ErrorCode,
 	type PlayerId,
-	type ServerMessage
+	type ServerMessage,
+	type VoteKind
 } from '$lib/protocol';
 import { type SocketStatus } from '$lib/realtime/client';
 
@@ -57,6 +58,10 @@ export class GameState {
 	choices = $state<{ words: readonly string[]; endsAt: number } | null>(null);
 	/** The secret word — only ever populated at the drawer, during 'drawing'. */
 	word = $state<string | null>(null);
+	/** Live like/dislike tally for the drawing being revealed. */
+	voteCounts = $state<{ likes: number; dislikes: number }>({ likes: 0, dislikes: 0 });
+	/** My vote on the drawing being revealed — local echo only, the server is authoritative. */
+	myVote = $state<VoteKind | null>(null);
 	/** Briefly true after an almost-correct guess ("So close!"). */
 	closeFlash = $state(false);
 	status = $state<SocketStatus>('closed');
@@ -169,6 +174,8 @@ export class GameState {
 				}
 				this.choices = null;
 				this.word = null;
+				this.voteCounts = { likes: 0, dislikes: 0 };
+				this.myVote = null;
 				break;
 			}
 
@@ -257,11 +264,18 @@ export class GameState {
 				break;
 			}
 
+			case 'voteUpdate': {
+				this.voteCounts = { likes: msg.likes, dislikes: msg.dislikes };
+				break;
+			}
+
 			case 'turnEnded': {
 				const { room } = this;
 				if (!room) {
 					break;
 				}
+				this.voteCounts = { likes: 0, dislikes: 0 };
+				this.myVote = null;
 				room.phase = 'reveal';
 				room.lastWord = msg.word;
 				room.lastGains = msg.gains;
