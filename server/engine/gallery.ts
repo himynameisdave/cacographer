@@ -10,17 +10,22 @@ import {
 	type VoteKind
 } from '../../src/lib/protocol';
 
+// The Readonly<> wrapper around ReadonlyMap is not redundant: tsgolint's
+// prefer-readonly-parameter-types check only recognizes the outer Readonly<> generic, not the
+// (already immutable) ReadonlyMap interface on its own (same quirk as mask.ts's ReadonlySet).
+type VoteMap = Readonly<ReadonlyMap<PlayerId, VoteKind>>;
+
 /** A finished turn's drawing, held in Room memory until the game ends. */
 export type StoredDrawing = {
 	readonly drawerId: PlayerId;
 	readonly drawerName: string; // snapshotted — the drawer may leave before game end
 	readonly word: string;
 	readonly ops: readonly DrawOp[];
-	readonly votes: ReadonlyMap<PlayerId, VoteKind>;
+	readonly votes: VoteMap;
 };
 
 /** Tally a drawing's vote map into like/dislike counts. */
-export function countVotes(votes: ReadonlyMap<PlayerId, VoteKind>): {
+export function countVotes(votes: VoteMap): {
 	likes: number;
 	dislikes: number;
 } {
