@@ -124,7 +124,9 @@
 	}
 
 	function onKeyDown(e: KeyboardEvent): void {
-		if (!canDraw || !socket) return;
+		if (!canDraw || !socket) {
+			return;
+		}
 		if ((e.metaKey || e.ctrlKey) && !e.altKey) {
 			if (e.key === 'z' && !e.shiftKey) {
 				e.preventDefault();
