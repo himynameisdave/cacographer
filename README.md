@@ -58,7 +58,8 @@ Run the full CI suite locally before pushing:
 bun run lint          # oxlint, strict — must be clean
 bun run format        # oxfmt --write (tabs, single quotes, 100 cols)
 bun run format:check  # what CI runs
-bun run check         # svelte-check, fails on warnings
+bun run check         # svelte-check (client, src/**), fails on warnings
+bun run check:server  # tsc (server/**, via server/tsconfig.json)
 bun test server       # engine unit tests
 bun run build         # static client → build/
 ```
