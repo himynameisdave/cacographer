@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { DEFAULT_SETTINGS, LIMITS, type PlayerId } from '../../src/lib/protocol';
-import { CHOOSE_MS, GRACE_MS, REVEAL_MS, SKIP_REVEAL_MS, SYNC_MS } from './Room';
+import { CHOOSE_MS, GRACE_MS, REDO_LIMIT, REVEAL_MS, SKIP_REVEAL_MS, SYNC_MS } from './Room';
 import { Harness, WORDS, chooseWord, choicesFor, startedGame } from './testUtils';
 
 const DRAW_MS = DEFAULT_SETTINGS.drawTimeSeconds * 1000; // 80_000
@@ -939,7 +939,7 @@ describe('draw ops', () => {
 		expect(h.typeTo(a, 'canvasState')).toHaveLength(0);
 	});
 
-	test('redo stack is capped at 3', () => {
+	test('redo stack is capped at REDO_LIMIT and evicts the oldest undone ops first', () => {
 		const { h, a } = drawingPair();
 		for (let i = 0; i < 5; i++) {
 			h.send(a, {
@@ -952,12 +952,52 @@ describe('draw ops', () => {
 		}
 		h.clear();
 
-		// Only 3 redos should work
-		for (let i = 0; i < 4; i++) {
+		// One redo beyond the cap should be a no-op.
+		for (let i = 0; i < REDO_LIMIT + 1; i++) {
 			h.send(a, { type: 'redo' });
 		}
 
-		expect(h.room.ops).toHaveLength(3);
+		// s3 and s4 were undone first (longest ago) and fall off the cap; s0-s2
+		// (undone most recently) come back, restored in their original draw order.
+		expect(h.room.ops.map((op) => op.id)).toEqual(['s0', 's1', 's2']);
+	});
+
+	test('undo after redo re-populates the redo stack correctly', () => {
+		const { h, a } = drawingPair();
+		h.send(a, {
+			type: 'draw',
+			op: { kind: 'stroke', id: 's1', points: [[0.1, 0.1]], color: '#000000', size: 4 }
+		});
+		h.send(a, {
+			type: 'draw',
+			op: { kind: 'stroke', id: 's2', points: [[0.2, 0.2]], color: '#000000', size: 4 }
+		});
+		h.send(a, { type: 'undo' }); // ops=[s1], redoStack=[s2]
+		h.send(a, { type: 'redo' }); // ops=[s1,s2], redoStack=[]
+		h.send(a, { type: 'undo' }); // ops=[s1], redoStack=[s2]
+		h.clear();
+		h.send(a, { type: 'redo' });
+
+		expect(h.room.ops.map((op) => op.id)).toEqual(['s1', 's2']);
+		expect(h.typeTo(a, 'canvasState')).toHaveLength(1);
+	});
+
+	test('redo stack does not carry over to the next drawer’s turn', () => {
+		const { h, a, b } = drawingPair();
+		h.send(a, {
+			type: 'draw',
+			op: { kind: 'stroke', id: 's1', points: [[0.1, 0.1]], color: '#000000', size: 4 }
+		});
+		h.send(a, { type: 'undo' }); // Alice's redo stack now holds s1
+		h.clock.advance(DRAW_MS); // Alice's turn times out
+		h.clock.advance(REVEAL_MS); // Bob's turn begins
+		chooseWord(h, b);
+		h.clear();
+
+		h.send(b, { type: 'redo' });
+
+		expect(h.room.ops).toHaveLength(0);
+		expect(h.typeTo(b, 'canvasState')).toHaveLength(0);
 	});
 
 	test('non-drawer cannot redo', () => {
