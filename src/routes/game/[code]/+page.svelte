@@ -123,8 +123,16 @@
 		socket?.send({ type: 'updateSettings', settings: partial });
 	}
 
+	function isTextInput(target: EventTarget | null): boolean {
+		return (
+			target instanceof HTMLInputElement ||
+			target instanceof HTMLTextAreaElement ||
+			(target instanceof HTMLElement && target.isContentEditable)
+		);
+	}
+
 	function onKeyDown(e: KeyboardEvent): void {
-		if (!canDraw || !socket) {
+		if (!canDraw || !socket || isTextInput(e.target)) {
 			return;
 		}
 		if ((e.metaKey || e.ctrlKey) && !e.altKey) {
