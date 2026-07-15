@@ -341,30 +341,32 @@
 					{:else if room.phase === 'finished'}
 						<div class="overlay solid">
 							<h2>🎉 Game over!</h2>
-							<ol class="final">
-								{#each gs.playersByScore as p, i (p.id)}
-									<li class:winner={p.id === room.winnerId}>
-										<span class="medal">
-											{p.id === room.winnerId ? '👑' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`}
-										</span>
-										<span class="f-name">{p.name}</span>
-										<span class="f-score">{p.score}</span>
-									</li>
-								{/each}
-							</ol>
-							{#if room.gallery}
-								{@const g = room.gallery}
-								{#if g.best || g.worst}
-									<div class="gallery-row">
-										{#if g.best}
-											<GalleryCard label="Most liked" entry={g.best} />
-										{/if}
-										{#if g.worst}
-											<GalleryCard label="Most disliked" entry={g.worst} />
-										{/if}
-									</div>
+							<div class="final-body">
+								<ol class="final">
+									{#each gs.playersByScore as p, i (p.id)}
+										<li class:winner={p.id === room.winnerId}>
+											<span class="medal">
+												{p.id === room.winnerId ? '👑' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`}
+											</span>
+											<span class="f-name">{p.name}</span>
+											<span class="f-score">{p.score}</span>
+										</li>
+									{/each}
+								</ol>
+								{#if room.gallery}
+									{@const g = room.gallery}
+									{#if g.best || g.worst}
+										<div class="gallery-row">
+											{#if g.best}
+												<GalleryCard label="Most liked" entry={g.best} />
+											{/if}
+											{#if g.worst}
+												<GalleryCard label="Most disliked" entry={g.worst} />
+											{/if}
+										</div>
+									{/if}
 								{/if}
-							{/if}
+							</div>
 							{#if gs.isHost}
 								<button class="btn btn-primary" onclick={() => socket?.send({ type: 'playAgain' })}>
 									Play again
@@ -716,6 +718,27 @@
 		color: var(--success);
 		font-weight: 700;
 		font-variant-numeric: tabular-nums;
+	}
+
+	/* The overlay tracks the 16:9 board, so it is far wider than it is tall: the
+	   standings sit beside the gallery and only wrap on narrow viewports, where
+	   `.overlay.solid` scrolls instead. */
+	.final-body {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		align-items: flex-start;
+		gap: 1rem;
+		width: 100%;
+	}
+
+	/* `overflow-y: auto` above zeroes the list's automatic minimum size, so without
+	   this the gallery beside it would shrink the standings to an unreadable sliver
+	   rather than letting the overlay scroll. */
+	.overlay.solid .final {
+		flex-shrink: 0;
+		width: min(14rem, 100%);
+		max-height: none;
 	}
 
 	.final li.winner {
