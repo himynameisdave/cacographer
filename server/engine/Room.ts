@@ -451,8 +451,7 @@ export class Room {
 		}
 		this.phase = 'lobby';
 		this.turn = null;
-		this.ops = [];
-		this.redoStack = [];
+		this.clearOps();
 		this.round = 0;
 		this.turnIndex = 0;
 		this.turnOrder = [];
@@ -499,8 +498,7 @@ export class Room {
 		}
 
 		this.clearTurnTimers();
-		this.ops = [];
-		this.redoStack = [];
+		this.clearOps();
 		for (const p of this.players.values()) {
 			p.guessedThisTurn = false;
 			p.guessedAtMs = null;
@@ -787,9 +785,13 @@ export class Room {
 		if (this.phase !== 'drawing' || this.turn?.drawerId !== playerId) {
 			return;
 		}
+		this.clearOps();
+		this.broadcast({ type: 'clearCanvas' });
+	}
+
+	private clearOps(): void {
 		this.ops = [];
 		this.redoStack = [];
-		this.broadcast({ type: 'clearCanvas' });
 	}
 
 	private undo(playerId: PlayerId): void {
@@ -911,8 +913,7 @@ export class Room {
 		this.clearTurnTimers();
 		this.phase = 'lobby';
 		this.turn = null;
-		this.ops = [];
-		this.redoStack = [];
+		this.clearOps();
 		this.systemChat(message);
 		this.broadcast({ type: 'roomState', room: this.toClientRoom() });
 	}
