@@ -1113,7 +1113,9 @@ const STROKE = {
 /** One fully drawn turn (Alice drew 'apple') advanced into its reveal window. */
 function revealedDrawing() {
 	const { h, ids } = startedGame(['Alice', 'Bob', 'Cara']);
-	const [a, b, c] = ids;
+	const a = ids[0]!;
+	const b = ids[1]!;
+	const c = ids[2]!;
 	const word = chooseWord(h, a);
 	h.send(a, { type: 'draw', op: STROKE });
 	h.clock.advance(DRAW_MS);
@@ -1135,7 +1137,7 @@ describe('votes & gallery', () => {
 	test('the drawer cannot vote on their own drawing', () => {
 		const { h, a } = revealedDrawing();
 		h.send(a, { type: 'vote', vote: 'like' });
-		expect(h.typeTo(a, 'error')[0].code).toBe('not_allowed');
+		expect(h.typeTo(a, 'error')[0]!.code).toBe('not_allowed');
 		expect(h.ofType('voteUpdate')).toHaveLength(0);
 	});
 
@@ -1154,7 +1156,7 @@ describe('votes & gallery', () => {
 		// A malformed wire value can't be expressed in ClientMessage's static types.
 		// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see comment above
 		h.send(b, { type: 'vote', vote: 'meh' as unknown as VoteKind });
-		expect(h.typeTo(b, 'error')[0].code).toBe('bad_message');
+		expect(h.typeTo(b, 'error')[0]!.code).toBe('bad_message');
 		expect(h.ofType('voteUpdate')).toHaveLength(0);
 	});
 
@@ -1162,10 +1164,11 @@ describe('votes & gallery', () => {
 		const lobby = new Harness();
 		const x = lobby.join('Alice');
 		lobby.send(x, { type: 'vote', vote: 'like' });
-		expect(lobby.typeTo(x, 'error')[0].code).toBe('not_allowed');
+		expect(lobby.typeTo(x, 'error')[0]!.code).toBe('not_allowed');
 
 		const { h, ids } = startedGame(['Alice', 'Bob']);
-		const [a, b] = ids;
+		const a = ids[0]!;
+		const b = ids[1]!;
 		h.send(b, { type: 'vote', vote: 'like' }); // choosing
 		expect(h.typeTo(b, 'error').at(-1)?.code).toBe('not_allowed');
 
@@ -1181,18 +1184,19 @@ describe('votes & gallery', () => {
 		h.clock.advance(REVEAL_MS); // next turn's choosing phase
 		h.clear();
 		h.send(b, { type: 'vote', vote: 'like' });
-		expect(h.typeTo(b, 'error')[0].code).toBe('not_allowed');
+		expect(h.typeTo(b, 'error')[0]!.code).toBe('not_allowed');
 		expect(h.ofType('voteUpdate')).toHaveLength(0);
 	});
 
 	test('a turn with nothing drawn is not votable and never enters the gallery', () => {
 		const { h, ids } = startedGame(['Alice', 'Bob'], { rounds: 1 });
-		const [a, b] = ids;
+		const a = ids[0]!;
+		const b = ids[1]!;
 		chooseWord(h, a);
 		h.clock.advance(DRAW_MS); // blank canvas
 		h.clear();
 		h.send(b, { type: 'vote', vote: 'like' });
-		expect(h.typeTo(b, 'error')[0].code).toBe('not_allowed');
+		expect(h.typeTo(b, 'error')[0]!.code).toBe('not_allowed');
 
 		h.clock.advance(REVEAL_MS);
 		chooseWord(h, b);
@@ -1203,7 +1207,8 @@ describe('votes & gallery', () => {
 
 	test('a drawing whose drawer left is still votable during the short reveal', () => {
 		const { h, ids } = startedGame(['Alice', 'Bob', 'Cara']);
-		const [a, b] = ids;
+		const a = ids[0]!;
+		const b = ids[1]!;
 		chooseWord(h, a);
 		h.send(a, { type: 'draw', op: STROKE });
 		h.clear();
@@ -1222,7 +1227,9 @@ describe('votes & gallery', () => {
 
 	test('game end publishes the most liked and most disliked drawings', () => {
 		const { h, ids } = startedGame(['Alice', 'Bob', 'Cara'], { rounds: 1 });
-		const [a, b, c] = ids;
+		const a = ids[0]!;
+		const b = ids[1]!;
+		const c = ids[2]!;
 
 		const w1 = chooseWord(h, a); // 'apple'
 		h.send(a, { type: 'draw', op: STROKE });
@@ -1270,12 +1277,14 @@ describe('votes & gallery', () => {
 		// The last reveal window is gone once the game is over — no more votes.
 		h.clear();
 		h.send(c, { type: 'vote', vote: 'like' });
-		expect(h.typeTo(c, 'error')[0].code).toBe('not_allowed');
+		expect(h.typeTo(c, 'error')[0]!.code).toBe('not_allowed');
 	});
 
 	test('a counted vote survives the voter leaving before game end', () => {
 		const { h, ids } = startedGame(['Alice', 'Bob', 'Cara'], { rounds: 1 });
-		const [a, b, c] = ids;
+		const a = ids[0]!;
+		const b = ids[1]!;
+		const c = ids[2]!;
 		const word = chooseWord(h, a); // 'apple'
 		h.send(a, { type: 'draw', op: STROKE });
 		h.clock.advance(DRAW_MS);
@@ -1295,7 +1304,8 @@ describe('votes & gallery', () => {
 
 	test('a reconnect on the game-over screen still receives the gallery', () => {
 		const { h, ids } = startedGame(['Alice', 'Bob'], { rounds: 1 });
-		const [a, b] = ids;
+		const a = ids[0]!;
+		const b = ids[1]!;
 		const word = chooseWord(h, a); // 'apple'
 		h.send(a, { type: 'draw', op: STROKE });
 		h.clock.advance(DRAW_MS);
@@ -1311,12 +1321,13 @@ describe('votes & gallery', () => {
 		expect(res.ok).toBe(true);
 		const joined = h.typeTo(b, 'joined');
 		expect(joined).toHaveLength(1);
-		expect(joined[0].room.gallery?.best?.word).toBe(word);
+		expect(joined[0]!.room.gallery?.best?.word).toBe(word);
 	});
 
 	test("playAgain discards the previous game's drawings and votes", () => {
 		const { h, ids } = startedGame(['Alice', 'Bob'], { rounds: 1 });
-		const [a, b] = ids;
+		const a = ids[0]!;
+		const b = ids[1]!;
 		chooseWord(h, a);
 		h.send(a, { type: 'draw', op: STROKE });
 		h.clock.advance(DRAW_MS);
@@ -1328,7 +1339,7 @@ describe('votes & gallery', () => {
 
 		h.clear();
 		h.send(a, { type: 'playAgain' });
-		expect(h.typeTo(b, 'roomState')[0].room.gallery).toBeNull();
+		expect(h.typeTo(b, 'roomState')[0]!.room.gallery).toBeNull();
 
 		// A rematch with no drawings ends with an empty gallery — nothing carried over.
 		h.send(a, { type: 'startGame' });
