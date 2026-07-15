@@ -128,10 +128,13 @@
 			return;
 		}
 		if ((e.metaKey || e.ctrlKey) && !e.altKey) {
-			if (e.key === 'z' && !e.shiftKey) {
+			// Shift+Z reports as uppercase 'Z' — compare case-insensitively or
+			// the redo chord never matches.
+			const key = e.key.toLowerCase();
+			if (key === 'z' && !e.shiftKey) {
 				e.preventDefault();
 				socket.send({ type: 'undo' });
-			} else if ((e.key === 'z' && e.shiftKey) || e.key === 'y') {
+			} else if ((key === 'z' && e.shiftKey) || key === 'y') {
 				e.preventDefault();
 				socket.send({ type: 'redo' });
 			}
