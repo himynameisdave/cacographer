@@ -24,6 +24,7 @@ import { maskWord, maxHints, pickRevealIndex, revealSchedule } from './mask';
 import { drawerPoints, guesserTimePoints, ordinalBonus } from './scoring';
 import { buildWordPool, sampleChoices } from './words';
 
+export const REDO_LIMIT = 3;
 export const CHOOSE_MS = 15_000;
 export const REVEAL_MS = 6000;
 export const SKIP_REVEAL_MS = 2500; // shorter interstitial when a turn is skipped
@@ -105,6 +106,7 @@ export class Room {
 	turnIndex = 0;
 	turn: TurnState | null = null;
 	ops: DrawOp[] = [];
+	redoStack: DrawOp[] = [];
 	usedWords = new Set<string>();
 	lastWord: string | null = null;
 	lastGains: Record<PlayerId, number> | null = null;
@@ -311,6 +313,10 @@ export class Room {
 				this.undo(playerId);
 				return;
 			}
+			case 'redo': {
+				this.redo(playerId);
+				return;
+			}
 			case 'guess': {
 				this.guess(playerId, msg.text);
 				return;
@@ -445,7 +451,7 @@ export class Room {
 		}
 		this.phase = 'lobby';
 		this.turn = null;
-		this.ops = [];
+		this.clearOps();
 		this.round = 0;
 		this.turnIndex = 0;
 		this.turnOrder = [];
@@ -492,7 +498,7 @@ export class Room {
 		}
 
 		this.clearTurnTimers();
-		this.ops = [];
+		this.clearOps();
 		for (const p of this.players.values()) {
 			p.guessedThisTurn = false;
 			p.guessedAtMs = null;
@@ -707,6 +713,8 @@ export class Room {
 			return;
 		}
 
+		this.redoStack = [];
+
 		const lastIndex = this.ops.length - 1;
 		const last = this.ops.at(-1);
 		if (valid.kind === 'stroke' && last?.kind === 'stroke' && last.id === valid.id) {
@@ -777,8 +785,13 @@ export class Room {
 		if (this.phase !== 'drawing' || this.turn?.drawerId !== playerId) {
 			return;
 		}
-		this.ops = [];
+		this.clearOps();
 		this.broadcast({ type: 'clearCanvas' });
+	}
+
+	private clearOps(): void {
+		this.ops = [];
+		this.redoStack = [];
 	}
 
 	private undo(playerId: PlayerId): void {
@@ -788,7 +801,22 @@ export class Room {
 		if (this.ops.length === 0) {
 			return;
 		}
-		this.ops.pop();
+		const op = this.ops.pop()!;
+		if (this.redoStack.length >= REDO_LIMIT) {
+			this.redoStack.shift();
+		}
+		this.redoStack.push(op);
+		this.broadcast({ type: 'canvasState', ops: this.ops });
+	}
+
+	private redo(playerId: PlayerId): void {
+		if (this.phase !== 'drawing' || this.turn?.drawerId !== playerId) {
+			return;
+		}
+		if (this.redoStack.length === 0) {
+			return;
+		}
+		this.ops.push(this.redoStack.pop()!);
 		this.broadcast({ type: 'canvasState', ops: this.ops });
 	}
 
@@ -885,7 +913,7 @@ export class Room {
 		this.clearTurnTimers();
 		this.phase = 'lobby';
 		this.turn = null;
-		this.ops = [];
+		this.clearOps();
 		this.systemChat(message);
 		this.broadcast({ type: 'roomState', room: this.toClientRoom() });
 	}

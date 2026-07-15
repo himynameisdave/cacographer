@@ -97,6 +97,7 @@ export type ClientMessage =
 	| { readonly type: 'draw'; readonly op: DrawOp } // stroke batches share op.id; server appends
 	| { readonly type: 'clearCanvas' }
 	| { readonly type: 'undo' }
+	| { readonly type: 'redo' }
 	| { readonly type: 'guess'; readonly text: string }
 	| { readonly type: 'chat'; readonly text: string }
 	| { readonly type: 'playAgain' };

@@ -123,6 +123,32 @@
 		socket?.send({ type: 'updateSettings', settings: partial });
 	}
 
+	function isTextInput(target: EventTarget | null): boolean {
+		return (
+			target instanceof HTMLInputElement ||
+			target instanceof HTMLTextAreaElement ||
+			(target instanceof HTMLElement && target.isContentEditable)
+		);
+	}
+
+	function onKeyDown(e: KeyboardEvent): void {
+		if (!canDraw || !socket || isTextInput(e.target)) {
+			return;
+		}
+		if ((e.metaKey || e.ctrlKey) && !e.altKey) {
+			// Shift+Z reports as uppercase 'Z' — compare case-insensitively or
+			// the redo chord never matches.
+			const key = e.key.toLowerCase();
+			if (key === 'z' && !e.shiftKey) {
+				e.preventDefault();
+				socket.send({ type: 'undo' });
+			} else if ((key === 'z' && e.shiftKey) || key === 'y') {
+				e.preventDefault();
+				socket.send({ type: 'redo' });
+			}
+		}
+	}
+
 	async function copyLink(): Promise<void> {
 		try {
 			await navigator.clipboard.writeText(location.href);
@@ -133,6 +159,8 @@
 		}
 	}
 </script>
+
+<svelte:window onkeydown={onKeyDown} />
 
 <svelte:head>
 	<title>{code ? `${code} · ` : ''}Cacographer</title>
@@ -357,6 +385,9 @@
 							>
 							<button class="tool-btn" title="Undo" onclick={() => socket?.send({ type: 'undo' })}
 								>↩️</button
+							>
+							<button class="tool-btn" title="Redo" onclick={() => socket?.send({ type: 'redo' })}
+								>↪️</button
 							>
 							<button
 								class="tool-btn"
