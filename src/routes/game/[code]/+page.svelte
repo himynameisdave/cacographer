@@ -7,6 +7,7 @@
 	import { GameState } from '$lib/game.svelte';
 	import Canvas from '$lib/components/Canvas.svelte';
 	import Chat from '$lib/components/Chat.svelte';
+	import ColorPicker from '$lib/components/ColorPicker.svelte';
 	import GalleryCard from '$lib/components/GalleryCard.svelte';
 	import PlayerList from '$lib/components/PlayerList.svelte';
 	import SettingsPanel from '$lib/components/SettingsPanel.svelte';
@@ -14,21 +15,6 @@
 	import WordBlanks from '$lib/components/WordBlanks.svelte';
 
 	const NAME_KEY = 'cacographer:name';
-	const COLORS = [
-		'#000000',
-		'#4d4d4d',
-		'#9c9c9c',
-		'#ffffff',
-		'#e53935',
-		'#f57c00',
-		'#fdd835',
-		'#43a047',
-		'#00acc1',
-		'#1e88e5',
-		'#8e24aa',
-		'#ec407a',
-		'#795548'
-	];
 	const SIZES = [4, 8, 14, 24];
 
 	const code = $derived((page.params.code ?? '').toUpperCase());
@@ -380,20 +366,14 @@
 
 				{#if canDraw}
 					<div class="toolbar card">
-						<div class="swatches">
-							{#each COLORS as c (c)}
-								<button
-									class="swatch"
-									class:active={color === c && tool !== 'eraser'}
-									style="background: {c}"
-									aria-label="Color {c}"
-									onclick={() => {
-										color = c;
-										if (tool === 'eraser') tool = 'pen';
-									}}
-								></button>
-							{/each}
-						</div>
+						<ColorPicker
+							{color}
+							active={tool !== 'eraser'}
+							onselect={(hex) => {
+								color = hex;
+								if (tool === 'eraser') tool = 'pen';
+							}}
+						/>
 						<div class="tool-group">
 							{#each SIZES as s (s)}
 								<button
@@ -829,29 +809,6 @@
 		gap: 1rem;
 		padding: 0.55rem 0.8rem;
 		flex-wrap: wrap;
-	}
-
-	.swatches {
-		display: flex;
-		gap: 0.3rem;
-		flex-wrap: wrap;
-	}
-
-	.swatch {
-		width: 22px;
-		height: 22px;
-		border-radius: 6px;
-		border: 2px solid var(--border);
-		transition: transform 80ms ease;
-	}
-
-	.swatch:hover {
-		transform: scale(1.15);
-	}
-
-	.swatch.active {
-		border-color: var(--accent);
-		transform: scale(1.15);
 	}
 
 	.tool-group {
