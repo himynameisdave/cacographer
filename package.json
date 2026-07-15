@@ -1,42 +1,42 @@
 {
-	"name": "cacographer",
-	"version": "0.0.1",
-	"private": true,
-	"type": "module",
-	"scripts": {
-		"dev": "concurrently -k -n game,web -c blue,magenta \"bun --watch server/index.ts\" \"vite dev\"",
-		"build": "vite build",
-		"start": "NODE_ENV=production bun server/index.ts",
-		"test": "bun test server",
-		"lint": "oxlint --deny-warnings --type-aware",
-		"format": "oxfmt",
-		"format:check": "oxfmt --check",
-		"prepare": "husky || true; svelte-kit sync || echo ''",
-		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
-		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
-	},
-	"devDependencies": {
-		"@sveltejs/adapter-static": "^3.0.10",
-		"@sveltejs/kit": "^2.63.0",
-		"@sveltejs/vite-plugin-svelte": "^7.2.0",
-		"concurrently": "^10.0.3",
-		"husky": "^9.1.7",
-		"lint-staged": "^17.0.8",
-		"oxfmt": "^0.59.0",
-		"oxlint": "^1.74.0",
-		"oxlint-tsgolint": "^0.24.0",
-		"svelte": "^5.56.5",
-		"svelte-check": "^4.7.2",
-		"typescript": "^6.0.3",
-		"vite": "^8.1.4"
-	},
-	"lint-staged": {
-		"*.{ts,js,mjs,cjs,svelte}": [
-			"oxfmt --write",
-			"oxlint --deny-warnings --type-aware"
-		],
-		"*.{json,md,yml,yaml,css}": [
-			"oxfmt --write"
-		]
-	}
+  "name": "cacographer",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -k -n game,web -c blue,magenta \"bun --watch server/index.ts\" \"vite dev\"",
+    "build": "vite build",
+    "start": "NODE_ENV=production bun server/index.ts",
+    "test": "bun test server",
+    "lint": "oxlint --deny-warnings --type-aware",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check",
+    "prepare": "husky || true; svelte-kit sync || echo ''",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
+    "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
+  },
+  "devDependencies": {
+    "@sveltejs/adapter-static": "^3.0.10",
+    "@sveltejs/kit": "^2.69.3",
+    "@sveltejs/vite-plugin-svelte": "^7.2.0",
+    "concurrently": "^10.0.3",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.8",
+    "oxfmt": "^0.59.0",
+    "oxlint": "^1.74.0",
+    "oxlint-tsgolint": "^0.24.0",
+    "svelte": "^5.56.5",
+    "svelte-check": "^4.7.2",
+    "typescript": "^6.0.3",
+    "vite": "^8.1.4"
+  },
+  "lint-staged": {
+    "*.{ts,js,mjs,cjs,svelte}": [
+      "oxfmt --write",
+      "oxlint --deny-warnings --type-aware"
+    ],
+    "*.{json,md,yml,yaml,css}": [
+      "oxfmt --write"
+    ]
+  }
 }
