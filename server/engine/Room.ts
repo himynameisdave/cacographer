@@ -14,11 +14,14 @@ import {
 	type ClientRoom,
 	type DrawOp,
 	type ErrorCode,
+	type Gallery,
 	type Phase,
 	type PlayerId,
 	type ServerMessage,
-	type Settings
+	type Settings,
+	type VoteKind
 } from '../../src/lib/protocol';
+import { buildGallery, countVotes, type StoredDrawing } from './gallery';
 import { levenshtein, normalize } from './text';
 import { maskWord, maxHints, pickRevealIndex, revealSchedule } from './mask';
 import { drawerPoints, guesserTimePoints, ordinalBonus } from './scoring';
@@ -91,6 +94,9 @@ type TurnState = {
 	drawMs: number;
 };
 
+/** The Room's mutable view of a stored drawing: votes are written while its reveal is open. */
+type VotableDrawing = StoredDrawing & { readonly votes: Map<PlayerId, VoteKind> };
+
 type JoinResult =
 	| { ok: true; playerId: PlayerId }
 	| { ok: false; code: ErrorCode; message: string };
@@ -112,6 +118,10 @@ export class Room {
 	lastGains: Record<PlayerId, number> | null = null;
 	winnerId: PlayerId | null = null;
 
+	private drawings: VotableDrawing[] = [];
+	/** The drawing open for voting — set for the reveal window, null everywhere else. */
+	private currentDrawing: VotableDrawing | null = null;
+	private gallery: Gallery | null = null;
 	private wordPool: string[] = [];
 	// oxlint-disable-next-line typescript/no-redundant-type-constituents -- see TimerHandle's doc comment
 	private phaseTimer: TimerHandle | null = null;
@@ -325,6 +335,10 @@ export class Room {
 				this.chat(playerId, msg.text);
 				return;
 			}
+			case 'vote': {
+				this.vote(playerId, msg.vote);
+				return;
+			}
 			case 'playAgain': {
 				this.playAgain(playerId);
 				return;
@@ -432,6 +446,9 @@ export class Room {
 		this.lastWord = null;
 		this.lastGains = null;
 		this.winnerId = null;
+		this.drawings = [];
+		this.currentDrawing = null;
+		this.gallery = null;
 		this.turnOrder = [...this.players.values()]
 			.filter((p: Readonly<ServerPlayer>) => p.connected)
 			.map((p: Readonly<ServerPlayer>) => p.id);
@@ -458,6 +475,9 @@ export class Room {
 		this.lastWord = null;
 		this.lastGains = null;
 		this.winnerId = null;
+		this.drawings = [];
+		this.currentDrawing = null;
+		this.gallery = null;
 		this.broadcast({ type: 'roomState', room: this.toClientRoom() });
 		this.systemChat('Back to the lobby');
 	}
@@ -499,6 +519,7 @@ export class Room {
 
 		this.clearTurnTimers();
 		this.clearOps();
+		this.currentDrawing = null;
 		for (const p of this.players.values()) {
 			p.guessedThisTurn = false;
 			p.guessedAtMs = null;
@@ -821,6 +842,31 @@ export class Room {
 	}
 
 	// -------------------------------------------------------------------------
+	// Voting
+	// -------------------------------------------------------------------------
+
+	private vote(playerId: PlayerId, kind: VoteKind): void {
+		// kind's static type is optimistic — it's an unvalidated wire payload (see validateOp).
+		// oxlint-disable-next-line typescript/no-unnecessary-condition -- see comment above
+		if (kind !== 'like' && kind !== 'dislike') {
+			this.sendError(playerId, 'bad_message', 'Invalid vote');
+			return;
+		}
+		if (this.phase !== 'reveal' || this.currentDrawing === null) {
+			this.sendError(playerId, 'not_allowed', 'Nothing to vote on right now');
+			return;
+		}
+		if (playerId === this.currentDrawing.drawerId) {
+			this.sendError(playerId, 'not_allowed', "You can't vote on your own drawing");
+			return;
+		}
+		// Re-voting overwrites — exactly one counted vote per player per drawing.
+		this.currentDrawing.votes.set(playerId, kind);
+		const { likes, dislikes } = countVotes(this.currentDrawing.votes);
+		this.broadcast({ type: 'voteUpdate', likes, dislikes });
+	}
+
+	// -------------------------------------------------------------------------
 	// Turn end / game end
 	// -------------------------------------------------------------------------
 
@@ -860,6 +906,23 @@ export class Room {
 		this.phase = 'reveal';
 		this.lastWord = this.turn.word ?? '';
 		this.lastGains = gains;
+
+		// Keep the finished drawing for the end-of-game gallery. Holding `this.ops` by
+		// reference is safe: draw/undo/clearCanvas are gated on phase === 'drawing', and
+		// every other path reassigns `this.ops` rather than mutating it.
+		if (this.turn.word !== null && this.ops.length > 0) {
+			this.currentDrawing = {
+				drawerId: this.turn.drawerId,
+				drawerName: this.players.get(this.turn.drawerId)?.name ?? 'Unknown',
+				word: this.turn.word,
+				ops: this.ops,
+				votes: new Map<PlayerId, VoteKind>()
+			};
+			this.drawings.push(this.currentDrawing);
+		} else {
+			this.currentDrawing = null;
+		}
+
 		const revealMs = reason === 'drawer_left' ? SKIP_REVEAL_MS : REVEAL_MS;
 		this.turn.endsAt = this.deps.now() + revealMs;
 		if (reason === 'drawer_left') {
@@ -894,6 +957,8 @@ export class Room {
 		this.clearTurnTimers();
 		this.phase = 'finished';
 		this.turn = null;
+		this.currentDrawing = null;
+		this.gallery = buildGallery(this.drawings);
 		let winner: ServerPlayer | null = null;
 		for (const p of this.players.values()) {
 			if (!winner || p.score > winner.score) {
@@ -914,6 +979,9 @@ export class Room {
 		this.phase = 'lobby';
 		this.turn = null;
 		this.clearOps();
+		this.drawings = [];
+		this.currentDrawing = null;
+		this.gallery = null;
 		this.systemChat(message);
 		this.broadcast({ type: 'roomState', room: this.toClientRoom() });
 	}
@@ -1024,7 +1092,8 @@ export class Room {
 			ops: this.ops,
 			lastWord: this.phase === 'reveal' || this.phase === 'finished' ? this.lastWord : null,
 			lastGains: this.phase === 'reveal' ? this.lastGains : null,
-			winnerId: this.winnerId
+			winnerId: this.winnerId,
+			gallery: this.phase === 'finished' ? this.gallery : null
 		};
 	}
 }

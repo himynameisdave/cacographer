@@ -48,6 +48,24 @@ export type DrawOp =
 			readonly color: string;
 	  };
 
+export type VoteKind = 'like' | 'dislike';
+
+/** A finished turn's drawing, kept in memory only — it dies with the room. */
+export type GalleryEntry = {
+	readonly drawerId: PlayerId;
+	readonly drawerName: string; // snapshotted — the drawer may have left by game end
+	readonly word: string;
+	readonly ops: readonly DrawOp[];
+	readonly likes: number;
+	readonly dislikes: number;
+};
+
+/** The finished game's standout drawings, picked by like/dislike votes. */
+export type Gallery = {
+	readonly best: GalleryEntry | null; // most liked (needs ≥1 like)
+	readonly worst: GalleryEntry | null; // most disliked among the rest (needs ≥1 dislike)
+};
+
 export type ClientPlayer = {
 	readonly id: PlayerId;
 	readonly name: string;
@@ -74,6 +92,7 @@ export type ClientRoom = {
 	readonly lastWord: string | null;
 	readonly lastGains: Readonly<Record<PlayerId, number>> | null;
 	readonly winnerId: PlayerId | null;
+	readonly gallery: Gallery | null; // non-null only in 'finished'
 };
 
 export type ChatScope = 'all' | 'guessed' | 'system';
@@ -100,6 +119,7 @@ export type ClientMessage =
 	| { readonly type: 'redo' }
 	| { readonly type: 'guess'; readonly text: string }
 	| { readonly type: 'chat'; readonly text: string }
+	| { readonly type: 'vote'; readonly vote: VoteKind } // applies to the drawing being revealed
 	| { readonly type: 'playAgain' };
 
 // ---------------------------------------------------------------------------
@@ -138,6 +158,7 @@ export type ServerMessage =
 			readonly totals: Readonly<Record<PlayerId, number>>;
 			readonly endsAt: number;
 	  }
+	| { readonly type: 'voteUpdate'; readonly likes: number; readonly dislikes: number } // reveal only
 	| {
 			readonly type: 'gameEnded';
 			readonly totals: Readonly<Record<PlayerId, number>>;

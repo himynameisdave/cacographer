@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { onDestroy } from 'svelte';
 	import { page } from '$app/state';
-	import { LIMITS, type DrawOp, type Settings } from '$lib/protocol';
+	import { LIMITS, type DrawOp, type Settings, type VoteKind } from '$lib/protocol';
 	import { GameSocket } from '$lib/realtime/client';
 	import { wsUrl } from '$lib/realtime/urls';
 	import { GameState } from '$lib/game.svelte';
 	import Canvas from '$lib/components/Canvas.svelte';
 	import Chat from '$lib/components/Chat.svelte';
+	import GalleryCard from '$lib/components/GalleryCard.svelte';
 	import PlayerList from '$lib/components/PlayerList.svelte';
 	import SettingsPanel from '$lib/components/SettingsPanel.svelte';
 	import Timer from '$lib/components/Timer.svelte';
@@ -147,6 +148,11 @@
 				socket.send({ type: 'redo' });
 			}
 		}
+	}
+
+	function vote(kind: VoteKind): void {
+		gs.myVote = kind;
+		socket?.send({ type: 'vote', vote: kind });
 	}
 
 	async function copyLink(): Promise<void> {
@@ -307,21 +313,60 @@
 									</li>
 								{/each}
 							</ul>
+							<!-- A snapshot exists exactly when a word was revealed onto a non-blank canvas. -->
+							{#if room.lastWord && room.ops.length > 0}
+								<div class="vote-row">
+									{#if gs.isDrawer}
+										<span class="vote-pill">👍 {gs.voteCounts.likes}</span>
+										<span class="vote-pill">👎 {gs.voteCounts.dislikes}</span>
+									{:else}
+										<button
+											class="vote-pill vote-btn"
+											class:active={gs.myVote === 'like'}
+											onclick={() => vote('like')}
+										>
+											👍 {gs.voteCounts.likes}
+										</button>
+										<button
+											class="vote-pill vote-btn"
+											class:active={gs.myVote === 'dislike'}
+											onclick={() => vote('dislike')}
+										>
+											👎 {gs.voteCounts.dislikes}
+										</button>
+									{/if}
+								</div>
+							{/if}
 						</div>
 					{:else if room.phase === 'finished'}
 						<div class="overlay solid">
 							<h2>🎉 Game over!</h2>
-							<ol class="final">
-								{#each gs.playersByScore as p, i (p.id)}
-									<li class:winner={p.id === room.winnerId}>
-										<span class="medal">
-											{p.id === room.winnerId ? '👑' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`}
-										</span>
-										<span class="f-name">{p.name}</span>
-										<span class="f-score">{p.score}</span>
-									</li>
-								{/each}
-							</ol>
+							<div class="final-body">
+								<ol class="final">
+									{#each gs.playersByScore as p, i (p.id)}
+										<li class:winner={p.id === room.winnerId}>
+											<span class="medal">
+												{p.id === room.winnerId ? '👑' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`}
+											</span>
+											<span class="f-name">{p.name}</span>
+											<span class="f-score">{p.score}</span>
+										</li>
+									{/each}
+								</ol>
+								{#if room.gallery}
+									{@const g = room.gallery}
+									{#if g.best || g.worst}
+										<div class="gallery-row">
+											{#if g.best}
+												<GalleryCard label="Most liked" entry={g.best} />
+											{/if}
+											{#if g.worst}
+												<GalleryCard label="Most disliked" entry={g.worst} />
+											{/if}
+										</div>
+									{/if}
+								{/if}
+							</div>
 							{#if gs.isHost}
 								<button class="btn btn-primary" onclick={() => socket?.send({ type: 'playAgain' })}>
 									Play again
@@ -611,6 +656,8 @@
 
 	.overlay.solid {
 		background: rgb(18 18 26 / 0.94);
+		overflow-y: auto;
+		justify-content: flex-start;
 	}
 
 	.overlay h2 {
@@ -673,6 +720,27 @@
 		font-variant-numeric: tabular-nums;
 	}
 
+	/* The overlay tracks the 16:9 board, so it is far wider than it is tall: the
+	   standings sit beside the gallery and only wrap on narrow viewports, where
+	   `.overlay.solid` scrolls instead. */
+	.final-body {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		align-items: flex-start;
+		gap: 1rem;
+		width: 100%;
+	}
+
+	/* `overflow-y: auto` above zeroes the list's automatic minimum size, so without
+	   this the gallery beside it would shrink the standings to an unreadable sliver
+	   rather than letting the overlay scroll. */
+	.overlay.solid .final {
+		flex-shrink: 0;
+		width: min(14rem, 100%);
+		max-height: none;
+	}
+
 	.final li.winner {
 		background: var(--accent-soft);
 		border: 1px solid rgb(251 191 36 / 0.4);
@@ -687,6 +755,44 @@
 		font-weight: 700;
 		font-variant-numeric: tabular-nums;
 		color: var(--text-muted);
+	}
+
+	.vote-row {
+		display: flex;
+		gap: 0.6rem;
+		align-items: center;
+	}
+
+	.vote-pill {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+		background: var(--bg-soft);
+		border-radius: 999px;
+		padding: 0.35rem 0.9rem;
+		font-weight: 700;
+		font-variant-numeric: tabular-nums;
+	}
+
+	button.vote-pill {
+		border: 1px solid transparent;
+		transition: transform 80ms ease;
+	}
+
+	button.vote-pill:hover {
+		transform: scale(1.08);
+	}
+
+	button.vote-pill.active {
+		border-color: var(--accent);
+		background: var(--accent-soft);
+	}
+
+	.gallery-row {
+		display: flex;
+		gap: 1rem;
+		flex-wrap: wrap;
+		justify-content: center;
 	}
 
 	.close-flash {
