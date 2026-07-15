@@ -298,6 +298,7 @@
 	height={H}
 	class:drawable={canDraw}
 	class:fill-tool={canDraw && tool === 'fill'}
+	class:eraser-tool={canDraw && tool === 'eraser'}
 	onpointerdown={onPointerDown}
 	onpointermove={onPointerMove}
 	onpointerup={endStroke}
@@ -320,6 +321,16 @@
 	}
 
 	canvas.fill-tool {
-		cursor: cell;
+		cursor:
+			url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Cpath d='M17 3L7.5 12.5 5 17l2-1 4.5-2.5L21 4z' fill='none' stroke='%23333' stroke-width='1.5' stroke-linejoin='round'/%3E%3Cpath d='M5 17c-1 2 0 4 0 4s2 1 4 0' fill='none' stroke='%2369f' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E")
+				4 22,
+			crosshair;
+	}
+
+	canvas.eraser-tool {
+		cursor:
+			url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Ccircle cx='12' cy='12' r='10' fill='none' stroke='%23666' stroke-width='2'/%3E%3C/svg%3E")
+				12 12,
+			crosshair;
 	}
 </style>
