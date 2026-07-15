@@ -98,44 +98,24 @@
 			"rules": {
 				"typescript/no-explicit-any": "off",
 				"typescript/no-non-null-assertion": "off",
-				"eslint/max-classes-per-file": "off"
+				"eslint/max-classes-per-file": "off",
+				// The engine validates untrusted wire JSON, so its tests have to construct payloads
+				// that violate the static contract on purpose (e.g. an unknown `wordSource`) — the
+				// assertion is the test. Same reasoning as no-explicit-any above.
+				"typescript/no-unsafe-type-assertion": "off"
 			}
 		},
 		{
-			// tsgolint (oxlint's type-aware backend) doesn't resolve `bun:test`'s ambient
-			// `expect`/`describe`/`test` globals, so every property access/call on them reads as
-			// an `error` type indistinguishable from a real `any` leak. Re-enable once tsgolint
-			// supports Bun's ambient types.
-			"files": ["server/engine/*.test.ts"],
-			"rules": {
-				"typescript/no-unsafe-call": "off",
-				"typescript/no-unsafe-member-access": "off"
-			}
-		},
-		{
+			// The transport boundary: `Socket` (Bun's `ServerWebSocket<SocketData>`) and `Buffer`
+			// are classes with inherently mutable members, so no wrapper makes them deeply
+			// readonly and every handler here has to take one. Exempting the two types keeps the
+			// rule enforcing on everything else in the file rather than switching it off wholesale.
 			"files": ["server/index.ts"],
 			"rules": {
-				// tsgolint doesn't resolve `node:fs`/`node:path`/`bun`'s ambient types in this
-				// project's tsconfig setup: every value derived from them (`process.env`, `Bun`
-				// socket data, `path.join`, ...) reads as `error`, which is indistinguishable from
-				// a real `any` leak. Re-enable once tsgolint supports them — this is the only
-				// file that touches those modules directly.
-				//
-				// `no-unnecessary-type-assertion` belongs here too: it once told us `ws.data.code!`
-				// was a redundant assertion because it couldn't resolve `ServerWebSocket<SocketData>`
-				// (from `bun`) and treated `ws.data.code` as already non-null. It's actually
-				// `string | null` — removing the `!` was a real regression caught by manually
-				// typechecking this file with `@types/bun`/`@types/node` temporarily installed,
-				// since svelte-check's tsconfig doesn't cover `server/` at all (see CLAUDE.md /
-				// README follow-up on that gap).
-				"typescript/no-unsafe-call": "off",
-				"typescript/no-unsafe-member-access": "off",
-				"typescript/no-unsafe-assignment": "off",
-				"typescript/no-unsafe-argument": "off",
-				"typescript/no-unsafe-type-assertion": "off",
-				"typescript/no-redundant-type-constituents": "off",
-				"typescript/strict-boolean-expressions": "off",
-				"typescript/no-unnecessary-type-assertion": "off"
+				"typescript/prefer-readonly-parameter-types": [
+					"error",
+					{ "allow": ["Socket", { "from": "package", "package": "@types/node", "name": "Buffer" }] }
+				]
 			}
 		}
 	]

@@ -57,5 +57,5 @@ export function pickRevealIndex(
 	if (candidates.length === 0) {
 		return null;
 	}
-	return candidates[Math.floor(random() * candidates.length)];
+	return candidates[Math.floor(random() * candidates.length)] ?? null;
 }

@@ -1,5 +1,11 @@
 import { describe, expect, test } from 'bun:test';
-import { DEFAULT_SETTINGS, LIMITS, type PlayerId, type VoteKind } from '../../src/lib/protocol';
+import {
+	DEFAULT_SETTINGS,
+	LIMITS,
+	type PlayerId,
+	type Settings,
+	type VoteKind
+} from '../../src/lib/protocol';
 import { CHOOSE_MS, GRACE_MS, REDO_LIMIT, REVEAL_MS, SKIP_REVEAL_MS, SYNC_MS } from './Room';
 import { Harness, WORDS, chooseWord, choicesFor, startedGame } from './testUtils';
 
@@ -12,22 +18,24 @@ const DRAW_MS = DEFAULT_SETTINGS.drawTimeSeconds * 1000; // 80_000
 describe('join', () => {
 	test('first player becomes host and receives a joined snapshot', () => {
 		const h = new Harness();
-		let registered: PlayerId | null = null;
+		// Collected rather than assigned to a `let`: TS's control-flow analysis can't see that a
+		// callback ran, so a `PlayerId | null` binding narrows to `null` at the assertion below.
+		const registered: PlayerId[] = [];
 		const res = h.room.join('Alice', (id) => {
-			registered = id;
+			registered.push(id);
 		});
 		if (!res.ok) {
 			throw new Error('join failed');
 		}
-		expect(registered).toBe(res.playerId);
+		expect(registered).toEqual([res.playerId]);
 		expect(h.room.hostId).toBe(res.playerId);
 
 		const joined = h.typeTo(res.playerId, 'joined');
 		expect(joined).toHaveLength(1);
-		expect(joined[0].you).toBe(res.playerId);
-		expect(joined[0].room.players).toHaveLength(1);
-		expect(joined[0].room.players[0].isHost).toBe(true);
-		expect(joined[0].room.phase).toBe('lobby');
+		expect(joined[0]!.you).toBe(res.playerId);
+		expect(joined[0]!.room.players).toHaveLength(1);
+		expect(joined[0]!.room.players[0]!.isHost).toBe(true);
+		expect(joined[0]!.room.phase).toBe('lobby');
 	});
 
 	test('playerJoined is broadcast to others, joiner gets the snapshot instead', () => {
@@ -38,13 +46,13 @@ describe('join', () => {
 
 		const toA = h.typeTo(a, 'playerJoined');
 		expect(toA).toHaveLength(1);
-		expect(toA[0].player.name).toBe('Bob');
-		expect(toA[0].player.isHost).toBe(false);
+		expect(toA[0]!.player.name).toBe('Bob');
+		expect(toA[0]!.player.isHost).toBe(false);
 
 		expect(h.typeTo(b, 'playerJoined')).toHaveLength(0);
 		const joined = h.typeTo(b, 'joined');
 		expect(joined).toHaveLength(1);
-		expect(joined[0].room.players.map((p) => p.name)).toEqual(['Alice', 'Bob']);
+		expect(joined[0]!.room.players.map((p) => p.name)).toEqual(['Alice', 'Bob']);
 	});
 
 	test('duplicate connected name is rejected (case/whitespace-insensitive)', () => {
@@ -99,7 +107,7 @@ describe('updateSettings', () => {
 		h.send(b, { type: 'updateSettings', settings: { rounds: 7 } });
 		const errs = h.typeTo(b, 'error');
 		expect(errs).toHaveLength(1);
-		expect(errs[0].code).toBe('not_allowed');
+		expect(errs[0]!.code).toBe('not_allowed');
 		expect(h.room.settings.rounds).toBe(DEFAULT_SETTINGS.rounds);
 	});
 
@@ -121,6 +129,23 @@ describe('updateSettings', () => {
 		expect(h.room.settings.wordChoiceCount).toBe(5);
 		expect(h.room.settings.hintCount).toBe(0);
 		expect(h.room.settings.maxPlayers).toBe(12);
+	});
+
+	test('wordSource accepts the known values and ignores anything else', () => {
+		const h = new Harness();
+		const a = h.join('Alice');
+
+		h.send(a, { type: 'updateSettings', settings: { wordSource: 'both' } });
+		expect(h.room.settings.wordSource).toBe('both');
+
+		// Settings are untrusted wire JSON — `Partial<Settings>` describes what a well-behaved
+		// client sends, not what actually arrives, so an unknown value must be dropped rather
+		// than stored.
+		h.send(a, {
+			type: 'updateSettings',
+			settings: { wordSource: 'garbage' as Settings['wordSource'] }
+		});
+		expect(h.room.settings.wordSource).toBe('both');
 	});
 
 	test('customWords are trimmed, empties dropped, capped in length and count', () => {
@@ -146,16 +171,16 @@ describe('updateSettings', () => {
 		h.send(a, { type: 'updateSettings', settings: { rounds: 5 } });
 		expect(h.typeTo(a, 'roomState')).toHaveLength(1);
 		expect(h.typeTo(b, 'roomState')).toHaveLength(1);
-		expect(h.typeTo(b, 'roomState')[0].room.settings.rounds).toBe(5);
+		expect(h.typeTo(b, 'roomState')[0]!.room.settings.rounds).toBe(5);
 	});
 
 	test('locked once the game has started', () => {
 		const { h, ids } = startedGame(['Alice', 'Bob']);
 		h.clear();
-		h.send(ids[0], { type: 'updateSettings', settings: { rounds: 9 } });
-		const errs = h.typeTo(ids[0], 'error');
+		h.send(ids[0]!, { type: 'updateSettings', settings: { rounds: 9 } });
+		const errs = h.typeTo(ids[0]!, 'error');
 		expect(errs).toHaveLength(1);
-		expect(errs[0].code).toBe('not_allowed');
+		expect(errs[0]!.code).toBe('not_allowed');
 		expect(h.room.settings.rounds).toBe(DEFAULT_SETTINGS.rounds);
 	});
 });
@@ -171,7 +196,7 @@ describe('startGame', () => {
 		const b = h.join('Bob');
 		h.clear();
 		h.send(b, { type: 'startGame' });
-		expect(h.typeTo(b, 'error')[0].code).toBe('not_allowed');
+		expect(h.typeTo(b, 'error')[0]!.code).toBe('not_allowed');
 		expect(h.room.phase).toBe('lobby');
 	});
 
@@ -180,7 +205,7 @@ describe('startGame', () => {
 		const a = h.join('Alice');
 		h.clear();
 		h.send(a, { type: 'startGame' });
-		expect(h.typeTo(a, 'error')[0].code).toBe('not_allowed');
+		expect(h.typeTo(a, 'error')[0]!.code).toBe('not_allowed');
 		expect(h.room.phase).toBe('lobby');
 	});
 
@@ -203,18 +228,20 @@ describe('startGame', () => {
 		for (const id of [a, b, c]) {
 			const started = h.typeTo(id, 'turnStarted');
 			expect(started).toHaveLength(1);
-			expect(started[0].drawerId).toBe(a);
-			expect(started[0].round).toBe(1);
-			expect(started[0].turnIndex).toBe(0);
+			expect(started[0]!.drawerId).toBe(a);
+			expect(started[0]!.round).toBe(1);
+			expect(started[0]!.turnIndex).toBe(0);
 		}
 	});
 
 	test('drawer gets wordChoiceCount choices; non-drawers get none', () => {
 		const { h, ids } = startedGame(['Alice', 'Bob', 'Cara']);
-		const [a, b, c] = ids;
+		const a = ids[0]!;
+		const b = ids[1]!;
+		const c = ids[2]!;
 		const choices = h.typeTo(a, 'wordChoices');
 		expect(choices).toHaveLength(1);
-		expect(choices[0].choices).toHaveLength(DEFAULT_SETTINGS.wordChoiceCount);
+		expect(choices[0]!.choices).toHaveLength(DEFAULT_SETTINGS.wordChoiceCount);
 		expect(h.typeTo(b, 'wordChoices')).toHaveLength(0);
 		expect(h.typeTo(c, 'wordChoices')).toHaveLength(0);
 	});
@@ -228,25 +255,26 @@ describe('chooseWord', () => {
 	test('non-drawer is rejected', () => {
 		const { h, ids } = startedGame(['Alice', 'Bob']);
 		h.clear();
-		h.send(ids[1], { type: 'chooseWord', word: WORDS[0] });
-		expect(h.typeTo(ids[1], 'error')[0].code).toBe('not_allowed');
+		h.send(ids[1]!, { type: 'chooseWord', word: WORDS[0]! });
+		expect(h.typeTo(ids[1]!, 'error')[0]!.code).toBe('not_allowed');
 		expect(h.room.phase).toBe('choosing');
 	});
 
 	test('a word outside the offered choices is rejected', () => {
 		const { h, ids } = startedGame(['Alice', 'Bob']);
 		h.clear();
-		h.send(ids[0], { type: 'chooseWord', word: 'zebra' });
-		expect(h.typeTo(ids[0], 'error')[0].code).toBe('not_allowed');
+		h.send(ids[0]!, { type: 'chooseWord', word: 'zebra' });
+		expect(h.typeTo(ids[0]!, 'error')[0]!.code).toBe('not_allowed');
 		expect(h.room.phase).toBe('choosing');
 	});
 
 	test('valid choice starts drawing: masked broadcast, yourWord to drawer only', () => {
 		const { h, ids } = startedGame(['Alice', 'Bob']);
-		const [a, b] = ids;
+		const a = ids[0]!;
+		const b = ids[1]!;
 		const choices = choicesFor(h, a);
 		h.clear();
-		h.send(a, { type: 'chooseWord', word: choices[0] });
+		h.send(a, { type: 'chooseWord', word: choices[0]! });
 
 		expect(h.room.phase).toBe('drawing');
 		const startedA = h.typeTo(a, 'drawingStarted');
@@ -254,12 +282,12 @@ describe('chooseWord', () => {
 		expect(startedA).toHaveLength(1);
 		expect(startedB).toHaveLength(1);
 		// 'apple' → all underscores, one per letter
-		expect(startedB[0].masked).toBe('_'.repeat(choices[0].length));
-		expect(startedB[0].masked).toMatch(/^[_ ]+$/u);
-		expect(startedB[0].masked).not.toBe(choices[0]);
+		expect(startedB[0]!.masked).toBe('_'.repeat(choices[0]!.length));
+		expect(startedB[0]!.masked).toMatch(/^[_ ]+$/u);
+		expect(startedB[0]!.masked).not.toBe(choices[0]);
 
 		expect(h.typeTo(a, 'yourWord')).toHaveLength(1);
-		expect(h.typeTo(a, 'yourWord')[0].word).toBe(choices[0]);
+		expect(h.typeTo(a, 'yourWord')[0]!.word).toBe(choices[0]!);
 		expect(h.typeTo(b, 'yourWord')).toHaveLength(0);
 
 		// Guessers never see the word in room snapshots either.
@@ -270,20 +298,22 @@ describe('chooseWord', () => {
 
 	test('masked preserves spaces in multi-word answers', () => {
 		const { h, ids } = startedGame(['Alice', 'Bob'], { customWords: ['ice cream'] });
-		const [a, b] = ids;
+		const a = ids[0]!;
+		const b = ids[1]!;
 		chooseWord(h, a); // only choice: 'ice cream'
-		expect(h.typeTo(b, 'drawingStarted')[0].masked).toBe('___ _____');
+		expect(h.typeTo(b, 'drawingStarted')[0]!.masked).toBe('___ _____');
 	});
 
 	test('auto-pick after CHOOSE_MS starts drawing automatically', () => {
 		const { h, ids } = startedGame(['Alice', 'Bob']);
-		const [a, b] = ids;
+		const a = ids[0]!;
+		const b = ids[1]!;
 		const choices = choicesFor(h, a);
 		h.clear();
 		h.clock.advance(CHOOSE_MS);
 		expect(h.room.phase).toBe('drawing');
 		// random() = 0 → picks the first choice
-		expect(h.typeTo(a, 'yourWord')[0].word).toBe(choices[0]);
+		expect(h.typeTo(a, 'yourWord')[0]!.word).toBe(choices[0]!);
 		expect(h.typeTo(b, 'drawingStarted')).toHaveLength(1);
 	});
 });
@@ -294,7 +324,9 @@ describe('chooseWord', () => {
 
 function drawingTrio() {
 	const { h, ids } = startedGame(['Alice', 'Bob', 'Cara']);
-	const [a, b, c] = ids;
+	const a = ids[0]!;
+	const b = ids[1]!;
+	const c = ids[2]!;
 	const word = chooseWord(h, a); // 'apple' with random()=0
 	h.clear();
 	return { h, a, b, c, word };
@@ -323,12 +355,12 @@ describe('guessing', () => {
 		for (const id of [a, b, c]) {
 			const guessed = h.typeTo(id, 'playerGuessed');
 			expect(guessed).toHaveLength(1);
-			expect(guessed[0].id).toBe(b);
+			expect(guessed[0]!.id).toBe(b);
 		}
 
 		const system = h.chatsTo(c).filter((e) => e.scope === 'system');
 		expect(system).toHaveLength(1);
-		expect(system[0].text).toBe('Bob guessed the word!');
+		expect(system[0]!.text).toBe('Bob guessed the word!');
 		// The turn keeps going: Cara has not guessed yet.
 		expect(h.room.phase).toBe('drawing');
 	});
@@ -347,7 +379,7 @@ describe('guessing', () => {
 		h.clear();
 		h.send(b, { type: 'guess', text: 'still chatting' });
 		expect(h.chatsTo(a)).toHaveLength(1);
-		expect(h.chatsTo(a)[0].scope).toBe('guessed');
+		expect(h.chatsTo(a)[0]!.scope).toBe('guessed');
 		expect(h.chatsTo(c)).toHaveLength(0);
 	});
 
@@ -392,8 +424,8 @@ describe('guessing', () => {
 		for (const id of [a, b, c]) {
 			const chats = h.chatsTo(id);
 			expect(chats).toHaveLength(1);
-			expect(chats[0].scope).toBe('all');
-			expect(chats[0].text).toBe(close);
+			expect(chats[0]!.scope).toBe('all');
+			expect(chats[0]!.text).toBe(close);
 		}
 	});
 
@@ -411,7 +443,9 @@ describe('guessing', () => {
 describe('scoring integration', () => {
 	test('time points + ordinal bonuses for guessers, average + sweep for drawer', () => {
 		const { h, ids } = startedGame(['Alice', 'Bob', 'Cara']);
-		const [a, b, c] = ids;
+		const a = ids[0]!;
+		const b = ids[1]!;
+		const c = ids[2]!;
 		const word = chooseWord(h, a);
 		const drawStart = h.clock.now;
 
@@ -427,12 +461,12 @@ describe('scoring integration', () => {
 
 		const ended = h.typeTo(a, 'turnEnded');
 		expect(ended).toHaveLength(1);
-		expect(ended[0].word).toBe(word);
-		expect(ended[0].gains[b]).toBe(400 + 50); // first guesser
-		expect(ended[0].gains[c]).toBe(300 + 30); // second guesser
-		expect(ended[0].gains[a]).toBe(Math.round((400 + 300) / 2) + 200); // drawer avg + sweep
-		expect(ended[0].totals).toEqual({ [a]: 550, [b]: 450, [c]: 330 });
-		expect(ended[0].endsAt).toBe(h.clock.now + REVEAL_MS);
+		expect(ended[0]!.word).toBe(word);
+		expect(ended[0]!.gains[b]).toBe(400 + 50); // first guesser
+		expect(ended[0]!.gains[c]).toBe(300 + 30); // second guesser
+		expect(ended[0]!.gains[a]).toBe(Math.round((400 + 300) / 2) + 200); // drawer avg + sweep
+		expect(ended[0]!.totals).toEqual({ [a]: 550, [b]: 450, [c]: 330 });
+		expect(ended[0]!.endsAt).toBe(h.clock.now + REVEAL_MS);
 
 		// Totals accumulate across turns: Bob draws next, only Alice guesses.
 		h.clock.advance(REVEAL_MS);
@@ -445,22 +479,22 @@ describe('scoring integration', () => {
 
 		const ended2 = h.typeTo(c, 'turnEnded');
 		expect(ended2).toHaveLength(1);
-		expect(ended2[0].gains[a]).toBe(300 + 50);
-		expect(ended2[0].gains[b]).toBe(300); // avg of [300], no sweep (1 of 2 eligible)
-		expect(ended2[0].gains[c]).toBeUndefined();
-		expect(ended2[0].totals).toEqual({ [a]: 900, [b]: 750, [c]: 330 });
+		expect(ended2[0]!.gains[a]).toBe(300 + 50);
+		expect(ended2[0]!.gains[b]).toBe(300); // avg of [300], no sweep (1 of 2 eligible)
+		expect(ended2[0]!.gains[c]).toBeUndefined();
+		expect(ended2[0]!.totals).toEqual({ [a]: 900, [b]: 750, [c]: 330 });
 	});
 
 	test('turn ends by timeout with no guessers: empty gains', () => {
 		const { h, ids } = startedGame(['Alice', 'Bob']);
-		chooseWord(h, ids[0]);
+		chooseWord(h, ids[0]!);
 		h.clear();
 		h.clock.advance(DRAW_MS);
 		expect(h.room.phase).toBe('reveal');
-		const ended = h.typeTo(ids[1], 'turnEnded');
+		const ended = h.typeTo(ids[1]!, 'turnEnded');
 		expect(ended).toHaveLength(1);
-		expect(ended[0].gains).toEqual({});
-		expect(ended[0].totals).toEqual({ [ids[0]]: 0, [ids[1]]: 0 });
+		expect(ended[0]!.gains).toEqual({});
+		expect(ended[0]!.totals).toEqual({ [ids[0]!]: 0, [ids[1]!]: 0 });
 	});
 });
 
@@ -471,7 +505,8 @@ describe('scoring integration', () => {
 describe('hints', () => {
 	test('letters reveal on the even schedule', () => {
 		const { h, ids } = startedGame(['Alice', 'Bob'], { hintCount: 2 });
-		const [a, b] = ids;
+		const a = ids[0]!;
+		const b = ids[1]!;
 		const word = chooseWord(h, a); // 'apple'
 		h.clear();
 
@@ -481,19 +516,20 @@ describe('hints', () => {
 		h.clock.advance(first);
 		let reveals = h.typeTo(b, 'letterRevealed');
 		expect(reveals).toHaveLength(1);
-		expect(reveals[0].masked).toBe('a____'); // random()=0 reveals index 0
+		expect(reveals[0]!.masked).toBe('a____'); // random()=0 reveals index 0
 
 		h.clock.advance(second - first);
 		reveals = h.typeTo(b, 'letterRevealed');
 		expect(reveals).toHaveLength(2);
-		expect(reveals[1].masked).toBe('ap___');
-		expect(reveals[1].masked).not.toBe(word);
+		expect(reveals[1]!.masked).toBe('ap___');
+		expect(reveals[1]!.masked).not.toBe(word);
 		expect(h.room.phase).toBe('drawing');
 	});
 
 	test('word is never fully revealed even when hintCount exceeds its length', () => {
 		const { h, ids } = startedGame(['Alice', 'Bob'], { hintCount: 10, customWords: ['cat'] });
-		const [a, b] = ids;
+		const a = ids[0]!;
+		const b = ids[1]!;
 		const word = chooseWord(h, a); // 'cat'
 		h.clear();
 		h.clock.advance(DRAW_MS); // run the whole turn
@@ -522,7 +558,8 @@ describe('hints', () => {
 describe('rotation and game end', () => {
 	test('next player draws after REVEAL_MS; game ends after all rounds', () => {
 		const { h, ids } = startedGame(['Alice', 'Bob'], { rounds: 1 });
-		const [a, b] = ids;
+		const a = ids[0]!;
+		const b = ids[1]!;
 
 		const w1 = chooseWord(h, a);
 		h.send(b, { type: 'guess', text: w1 }); // instant: 500 + 50; drawer 500 + 200
@@ -533,9 +570,9 @@ describe('rotation and game end', () => {
 		expect(h.room.phase).toBe('choosing');
 		const started = h.typeTo(a, 'turnStarted');
 		expect(started).toHaveLength(1);
-		expect(started[0].drawerId).toBe(b);
-		expect(started[0].round).toBe(1);
-		expect(started[0].turnIndex).toBe(1);
+		expect(started[0]!.drawerId).toBe(b);
+		expect(started[0]!.round).toBe(1);
+		expect(started[0]!.turnIndex).toBe(1);
 
 		chooseWord(h, b);
 		h.clock.advance(DRAW_MS); // nobody guesses
@@ -546,14 +583,15 @@ describe('rotation and game end', () => {
 		expect(h.room.phase).toBe('finished');
 		const ended = h.typeTo(b, 'gameEnded');
 		expect(ended).toHaveLength(1);
-		expect(ended[0].winnerId).toBe(a); // 700 vs 550
-		expect(ended[0].totals).toEqual({ [a]: 700, [b]: 550 });
+		expect(ended[0]!.winnerId).toBe(a); // 700 vs 550
+		expect(ended[0]!.totals).toEqual({ [a]: 700, [b]: 550 });
 		expect(h.room.winnerId).toBe(a);
 	});
 
 	test('playAgain: host only, resets to lobby', () => {
 		const { h, ids } = startedGame(['Alice', 'Bob'], { rounds: 1 });
-		const [a, b] = ids;
+		const a = ids[0]!;
+		const b = ids[1]!;
 		chooseWord(h, a);
 		h.clock.advance(DRAW_MS + REVEAL_MS); // turn 1 over, turn 2 begins
 		chooseWord(h, b);
@@ -562,7 +600,7 @@ describe('rotation and game end', () => {
 
 		h.clear();
 		h.send(b, { type: 'playAgain' });
-		expect(h.typeTo(b, 'error')[0].code).toBe('not_allowed');
+		expect(h.typeTo(b, 'error')[0]!.code).toBe('not_allowed');
 		expect(h.room.phase).toBe('finished');
 
 		h.clear();
@@ -573,7 +611,7 @@ describe('rotation and game end', () => {
 		expect(h.room.turnOrder).toEqual([]);
 		const states = h.typeTo(b, 'roomState');
 		expect(states).toHaveLength(1);
-		expect(states[0].room.phase).toBe('lobby');
+		expect(states[0]!.room.phase).toBe('lobby');
 	});
 });
 
@@ -584,7 +622,9 @@ describe('rotation and game end', () => {
 describe('disconnects', () => {
 	test('drawer disconnect during drawing skips the turn without scoring', () => {
 		const { h, ids } = startedGame(['Alice', 'Bob', 'Cara']);
-		const [a, b, c] = ids;
+		const a = ids[0]!;
+		const b = ids[1]!;
+		const c = ids[2]!;
 		chooseWord(h, a);
 		h.clock.advance(1000);
 		h.clear();
@@ -593,21 +633,21 @@ describe('disconnects', () => {
 		expect(h.room.phase).toBe('reveal');
 		const ended = h.typeTo(b, 'turnEnded');
 		expect(ended).toHaveLength(1);
-		expect(ended[0].gains).toEqual({});
-		expect(ended[0].totals).toEqual({ [a]: 0, [b]: 0, [c]: 0 });
-		expect(ended[0].endsAt).toBe(h.clock.now + SKIP_REVEAL_MS);
+		expect(ended[0]!.gains).toEqual({});
+		expect(ended[0]!.totals).toEqual({ [a]: 0, [b]: 0, [c]: 0 });
+		expect(ended[0]!.endsAt).toBe(h.clock.now + SKIP_REVEAL_MS);
 		expect(h.chatsTo(c).some((e) => e.scope === 'system' && e.text.includes('turn skipped'))).toBe(
 			true
 		);
 
 		// Host moved off the disconnected drawer.
 		expect(h.room.hostId).toBe(b);
-		expect(h.typeTo(c, 'hostChanged')[0].hostId).toBe(b);
+		expect(h.typeTo(c, 'hostChanged')[0]!.hostId).toBe(b);
 
 		h.clear();
 		h.clock.advance(SKIP_REVEAL_MS);
 		expect(h.room.phase).toBe('choosing');
-		expect(h.typeTo(c, 'turnStarted')[0].drawerId).toBe(b);
+		expect(h.typeTo(c, 'turnStarted')[0]!.drawerId).toBe(b);
 	});
 
 	test('host disconnect transfers host to the next connected player', () => {
@@ -628,7 +668,9 @@ describe('disconnects', () => {
 
 	test('rejoin within grace keeps the same id, score, and slot', () => {
 		const { h, ids } = startedGame(['Alice', 'Bob', 'Cara']);
-		const [a, b, c] = ids;
+		const a = ids[0]!;
+		const b = ids[1]!;
+		const c = ids[2]!;
 		const word = chooseWord(h, a);
 		h.send(b, { type: 'guess', text: word }); // 500 + 50
 		h.send(c, { type: 'guess', text: word }); // 500 + 30 → turn ends, scores applied
@@ -650,7 +692,7 @@ describe('disconnects', () => {
 
 		const joined = h.typeTo(b, 'joined');
 		expect(joined).toHaveLength(1);
-		expect(joined[0].room.players.find((p) => p.id === b)!.score).toBe(550);
+		expect(joined[0]!.room.players.find((p) => p.id === b)!.score).toBe(550);
 		for (const id of [a, c]) {
 			expect(h.typeTo(id, 'playerConnection')).toEqual([
 				{ type: 'playerConnection', id: b, connected: true }
@@ -661,7 +703,9 @@ describe('disconnects', () => {
 
 	test('after GRACE_MS without rejoin the player is removed', () => {
 		const { h, ids } = startedGame(['Alice', 'Bob', 'Cara']);
-		const [a, b, c] = ids;
+		const a = ids[0]!;
+		const b = ids[1]!;
+		const c = ids[2]!;
 		chooseWord(h, a);
 		h.room.disconnect(b);
 		h.clear();
@@ -677,7 +721,9 @@ describe('disconnects', () => {
 
 	test('removal before the current drawer keeps the turn pointer aimed correctly', () => {
 		const { h, ids } = startedGame(['Alice', 'Bob', 'Cara']);
-		const [a, b, c] = ids;
+		const a = ids[0]!;
+		const b = ids[1]!;
+		const c = ids[2]!;
 		const w1 = chooseWord(h, a);
 		h.send(b, { type: 'guess', text: w1 });
 		h.send(c, { type: 'guess', text: w1 });
@@ -695,12 +741,14 @@ describe('disconnects', () => {
 		h.clock.advance(REVEAL_MS);
 		// Cara draws next — the pointer did not skip her or repeat Bob.
 		expect(h.room.phase).toBe('choosing');
-		expect(h.typeTo(c, 'turnStarted')[0].drawerId).toBe(c);
+		expect(h.typeTo(c, 'turnStarted')[0]!.drawerId).toBe(c);
 	});
 
 	test('mid-game disconnects leaving <2 connected abort to the lobby', () => {
 		const { h, ids } = startedGame(['Alice', 'Bob', 'Cara']);
-		const [a, b, c] = ids;
+		const a = ids[0]!;
+		const b = ids[1]!;
+		const c = ids[2]!;
 		chooseWord(h, a);
 		h.room.disconnect(b);
 		expect(h.room.phase).toBe('drawing'); // Cara can still guess
@@ -723,7 +771,8 @@ describe('disconnects', () => {
 
 function drawingPair() {
 	const { h, ids } = startedGame(['Alice', 'Bob']);
-	const [a, b] = ids;
+	const a = ids[0]!;
+	const b = ids[1]!;
 	chooseWord(h, a);
 	h.clear();
 	return { h, a, b };
@@ -732,7 +781,8 @@ function drawingPair() {
 describe('draw ops', () => {
 	test('only the drawer may draw, and only during drawing', () => {
 		const { h, ids } = startedGame(['Alice', 'Bob']);
-		const [a, b] = ids;
+		const a = ids[0]!;
+		const b = ids[1]!;
 		const op = {
 			kind: 'stroke' as const,
 			id: 's1',
@@ -771,7 +821,7 @@ describe('draw ops', () => {
 		});
 
 		expect(h.room.ops).toHaveLength(1);
-		const [merged] = h.room.ops;
+		const merged = h.room.ops[0]!;
 		if (merged.kind !== 'stroke') {
 			throw new Error('expected stroke');
 		}
@@ -783,8 +833,8 @@ describe('draw ops', () => {
 
 		const relayed = h.typeTo(b, 'draw');
 		expect(relayed).toHaveLength(2);
-		expect(relayed[0].op.kind === 'stroke' && relayed[0].op.points).toHaveLength(2);
-		expect(relayed[1].op.kind === 'stroke' && relayed[1].op.points).toHaveLength(1);
+		expect(relayed[0]!.op.kind === 'stroke' && relayed[0]!.op.points).toHaveLength(2);
+		expect(relayed[1]!.op.kind === 'stroke' && relayed[1]!.op.points).toHaveLength(1);
 		expect(h.typeTo(a, 'draw')).toHaveLength(0); // not echoed to the drawer
 	});
 
@@ -796,7 +846,7 @@ describe('draw ops', () => {
 		});
 		h.send(a, { type: 'draw', op: { kind: 'fill', id: 'f1', x: 0.5, y: 0.5, color: '#00ff00' } });
 		expect(h.room.ops).toHaveLength(2);
-		expect(h.room.ops[1].kind).toBe('fill');
+		expect(h.room.ops[1]!.kind).toBe('fill');
 	});
 
 	test('invalid ops are rejected: bad color, empty points, malformed points', () => {
@@ -829,7 +879,7 @@ describe('draw ops', () => {
 			type: 'draw',
 			op: { kind: 'stroke', id: 's1', points: [[5, -3]], color: '#123abc', size: 999 }
 		});
-		const [op] = h.room.ops;
+		const op = h.room.ops[0]!;
 		if (op.kind !== 'stroke') {
 			throw new Error('expected stroke');
 		}
@@ -864,11 +914,11 @@ describe('draw ops', () => {
 		h.send(a, { type: 'undo' });
 
 		expect(h.room.ops).toHaveLength(1);
-		expect(h.room.ops[0].kind).toBe('stroke');
+		expect(h.room.ops[0]!.kind).toBe('stroke');
 		for (const id of [a, b]) {
 			const state = h.typeTo(id, 'canvasState');
 			expect(state).toHaveLength(1);
-			expect(state[0].ops).toHaveLength(1);
+			expect(state[0]!.ops).toHaveLength(1);
 		}
 	});
 
@@ -884,11 +934,11 @@ describe('draw ops', () => {
 		h.send(a, { type: 'redo' });
 
 		expect(h.room.ops).toHaveLength(2);
-		expect(h.room.ops[1].kind).toBe('fill');
+		expect(h.room.ops[1]!.kind).toBe('fill');
 		for (const id of [a, b]) {
 			const state = h.typeTo(id, 'canvasState');
 			expect(state).toHaveLength(1);
-			expect(state[0].ops).toHaveLength(2);
+			expect(state[0]!.ops).toHaveLength(2);
 		}
 	});
 
@@ -920,7 +970,7 @@ describe('draw ops', () => {
 		h.send(a, { type: 'redo' });
 
 		expect(h.room.ops).toHaveLength(1);
-		expect(h.room.ops[0].id).toBe('s2');
+		expect(h.room.ops[0]!.id).toBe('s2');
 		expect(h.typeTo(a, 'canvasState')).toHaveLength(0);
 	});
 
@@ -1023,7 +1073,8 @@ describe('draw ops', () => {
 describe('timeSync', () => {
 	test('broadcast every SYNC_MS during drawing with the turn deadline', () => {
 		const { h, ids } = startedGame(['Alice', 'Bob']);
-		const [a, b] = ids;
+		const a = ids[0]!;
+		const b = ids[1]!;
 		chooseWord(h, a);
 		const endsAt = h.clock.now + DRAW_MS;
 		h.clear();
@@ -1038,7 +1089,7 @@ describe('timeSync', () => {
 
 	test('stops once the turn ends', () => {
 		const { h, ids } = startedGame(['Alice', 'Bob']);
-		chooseWord(h, ids[0]);
+		chooseWord(h, ids[0]!);
 		h.clock.advance(DRAW_MS);
 		expect(h.room.phase).toBe('reveal');
 		h.clear();
@@ -1062,7 +1113,9 @@ const STROKE = {
 /** One fully drawn turn (Alice drew 'apple') advanced into its reveal window. */
 function revealedDrawing() {
 	const { h, ids } = startedGame(['Alice', 'Bob', 'Cara']);
-	const [a, b, c] = ids;
+	const a = ids[0]!;
+	const b = ids[1]!;
+	const c = ids[2]!;
 	const word = chooseWord(h, a);
 	h.send(a, { type: 'draw', op: STROKE });
 	h.clock.advance(DRAW_MS);
@@ -1084,7 +1137,7 @@ describe('votes & gallery', () => {
 	test('the drawer cannot vote on their own drawing', () => {
 		const { h, a } = revealedDrawing();
 		h.send(a, { type: 'vote', vote: 'like' });
-		expect(h.typeTo(a, 'error')[0].code).toBe('not_allowed');
+		expect(h.typeTo(a, 'error')[0]!.code).toBe('not_allowed');
 		expect(h.ofType('voteUpdate')).toHaveLength(0);
 	});
 
@@ -1103,7 +1156,7 @@ describe('votes & gallery', () => {
 		// A malformed wire value can't be expressed in ClientMessage's static types.
 		// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see comment above
 		h.send(b, { type: 'vote', vote: 'meh' as unknown as VoteKind });
-		expect(h.typeTo(b, 'error')[0].code).toBe('bad_message');
+		expect(h.typeTo(b, 'error')[0]!.code).toBe('bad_message');
 		expect(h.ofType('voteUpdate')).toHaveLength(0);
 	});
 
@@ -1111,10 +1164,11 @@ describe('votes & gallery', () => {
 		const lobby = new Harness();
 		const x = lobby.join('Alice');
 		lobby.send(x, { type: 'vote', vote: 'like' });
-		expect(lobby.typeTo(x, 'error')[0].code).toBe('not_allowed');
+		expect(lobby.typeTo(x, 'error')[0]!.code).toBe('not_allowed');
 
 		const { h, ids } = startedGame(['Alice', 'Bob']);
-		const [a, b] = ids;
+		const a = ids[0]!;
+		const b = ids[1]!;
 		h.send(b, { type: 'vote', vote: 'like' }); // choosing
 		expect(h.typeTo(b, 'error').at(-1)?.code).toBe('not_allowed');
 
@@ -1130,18 +1184,19 @@ describe('votes & gallery', () => {
 		h.clock.advance(REVEAL_MS); // next turn's choosing phase
 		h.clear();
 		h.send(b, { type: 'vote', vote: 'like' });
-		expect(h.typeTo(b, 'error')[0].code).toBe('not_allowed');
+		expect(h.typeTo(b, 'error')[0]!.code).toBe('not_allowed');
 		expect(h.ofType('voteUpdate')).toHaveLength(0);
 	});
 
 	test('a turn with nothing drawn is not votable and never enters the gallery', () => {
 		const { h, ids } = startedGame(['Alice', 'Bob'], { rounds: 1 });
-		const [a, b] = ids;
+		const a = ids[0]!;
+		const b = ids[1]!;
 		chooseWord(h, a);
 		h.clock.advance(DRAW_MS); // blank canvas
 		h.clear();
 		h.send(b, { type: 'vote', vote: 'like' });
-		expect(h.typeTo(b, 'error')[0].code).toBe('not_allowed');
+		expect(h.typeTo(b, 'error')[0]!.code).toBe('not_allowed');
 
 		h.clock.advance(REVEAL_MS);
 		chooseWord(h, b);
@@ -1152,7 +1207,8 @@ describe('votes & gallery', () => {
 
 	test('a drawing whose drawer left is still votable during the short reveal', () => {
 		const { h, ids } = startedGame(['Alice', 'Bob', 'Cara']);
-		const [a, b] = ids;
+		const a = ids[0]!;
+		const b = ids[1]!;
 		chooseWord(h, a);
 		h.send(a, { type: 'draw', op: STROKE });
 		h.clear();
@@ -1171,7 +1227,9 @@ describe('votes & gallery', () => {
 
 	test('game end publishes the most liked and most disliked drawings', () => {
 		const { h, ids } = startedGame(['Alice', 'Bob', 'Cara'], { rounds: 1 });
-		const [a, b, c] = ids;
+		const a = ids[0]!;
+		const b = ids[1]!;
+		const c = ids[2]!;
 
 		const w1 = chooseWord(h, a); // 'apple'
 		h.send(a, { type: 'draw', op: STROKE });
@@ -1219,12 +1277,14 @@ describe('votes & gallery', () => {
 		// The last reveal window is gone once the game is over — no more votes.
 		h.clear();
 		h.send(c, { type: 'vote', vote: 'like' });
-		expect(h.typeTo(c, 'error')[0].code).toBe('not_allowed');
+		expect(h.typeTo(c, 'error')[0]!.code).toBe('not_allowed');
 	});
 
 	test('a counted vote survives the voter leaving before game end', () => {
 		const { h, ids } = startedGame(['Alice', 'Bob', 'Cara'], { rounds: 1 });
-		const [a, b, c] = ids;
+		const a = ids[0]!;
+		const b = ids[1]!;
+		const c = ids[2]!;
 		const word = chooseWord(h, a); // 'apple'
 		h.send(a, { type: 'draw', op: STROKE });
 		h.clock.advance(DRAW_MS);
@@ -1244,7 +1304,8 @@ describe('votes & gallery', () => {
 
 	test('a reconnect on the game-over screen still receives the gallery', () => {
 		const { h, ids } = startedGame(['Alice', 'Bob'], { rounds: 1 });
-		const [a, b] = ids;
+		const a = ids[0]!;
+		const b = ids[1]!;
 		const word = chooseWord(h, a); // 'apple'
 		h.send(a, { type: 'draw', op: STROKE });
 		h.clock.advance(DRAW_MS);
@@ -1260,12 +1321,13 @@ describe('votes & gallery', () => {
 		expect(res.ok).toBe(true);
 		const joined = h.typeTo(b, 'joined');
 		expect(joined).toHaveLength(1);
-		expect(joined[0].room.gallery?.best?.word).toBe(word);
+		expect(joined[0]!.room.gallery?.best?.word).toBe(word);
 	});
 
 	test("playAgain discards the previous game's drawings and votes", () => {
 		const { h, ids } = startedGame(['Alice', 'Bob'], { rounds: 1 });
-		const [a, b] = ids;
+		const a = ids[0]!;
+		const b = ids[1]!;
 		chooseWord(h, a);
 		h.send(a, { type: 'draw', op: STROKE });
 		h.clock.advance(DRAW_MS);
@@ -1277,7 +1339,7 @@ describe('votes & gallery', () => {
 
 		h.clear();
 		h.send(a, { type: 'playAgain' });
-		expect(h.typeTo(b, 'roomState')[0].room.gallery).toBeNull();
+		expect(h.typeTo(b, 'roomState')[0]!.room.gallery).toBeNull();
 
 		// A rematch with no drawings ends with an empty gallery — nothing carried over.
 		h.send(a, { type: 'startGame' });

@@ -1,1 +1,6 @@
 bunx lint-staged
+
+# `tsc -p` type-checks a whole program and refuses to run at all if it is also handed individual
+# filenames (TS5112), so this checks the server project as a whole rather than going through
+# lint-staged. ~0.5s — unlike `bun run check` (svelte-check), which stays in CI only.
+bun run check:server
