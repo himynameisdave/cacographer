@@ -43,8 +43,9 @@ export function sampleChoices(
 	const arr = [...available];
 	const n = Math.min(count, arr.length);
 	for (let i = 0; i < n; i++) {
+		// `i < n <= arr.length` and `j` lands in `[i, arr.length - 1]`, so both reads are in bounds.
 		const j = i + Math.floor(random() * (arr.length - i));
-		[arr[i], arr[j]] = [arr[j], arr[i]];
+		[arr[i], arr[j]] = [arr[j]!, arr[i]!];
 	}
 	return arr.slice(0, n);
 }

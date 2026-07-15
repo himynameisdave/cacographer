@@ -144,7 +144,7 @@ function json(body: unknown, status = 200): Response {
 // ReadableStream/AbortSignal members are inherently mutable classes, so no wrapper can make it
 // deeply readonly.
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- see comment above
-function fetchHandler(req: Request, server: Server): Response | undefined {
+function fetchHandler(req: Request, server: Server<SocketData>): Response | undefined {
 	const url = new URL(req.url);
 	const { pathname } = url;
 
@@ -160,7 +160,9 @@ function fetchHandler(req: Request, server: Server): Response | undefined {
 
 		const roomMatch = /^\/api\/rooms\/(?<code>[^/]+)$/u.exec(pathname);
 		if (req.method === 'GET' && roomMatch?.groups) {
-			const room = manager.get(roomMatch.groups.code);
+			// `code` is a non-optional group in the pattern above, so any match defines it —
+			// `groups` is just typed as an open record.
+			const room = manager.get(roomMatch.groups.code!);
 			if (!room) {
 				return json({ exists: false });
 			}
@@ -225,25 +227,36 @@ function handleJoin(ws: Socket, msg: Readonly<Record<string, unknown>>): void {
 	}
 }
 
+/**
+ * The wire trust boundary: freshly-parsed JSON is `unknown`, and all we can establish here is
+ * that it's an object carrying a string `type`. `Room.handleMessage` switches exhaustively on
+ * that discriminant and each branch validates its own payload, so anything malformed past this
+ * point is rejected there rather than trusted.
+ */
+function isClientMessage(value: unknown): value is ClientMessage {
+	return (
+		typeof value === 'object' && value !== null && 'type' in value && typeof value.type === 'string'
+	);
+}
+
 function messageHandler(ws: Socket, raw: string | Buffer): void {
 	const size = typeof raw === 'string' ? Buffer.byteLength(raw) : raw.byteLength;
 	if (size > MAX_MESSAGE_BYTES) {
 		return;
 	}
 
-	let msg: ClientMessage;
+	let parsed: unknown;
 	try {
-		msg = JSON.parse(typeof raw === 'string' ? raw : raw.toString());
+		parsed = JSON.parse(typeof raw === 'string' ? raw : raw.toString());
 	} catch {
 		sendTo(ws, { type: 'error', code: 'bad_message', message: 'Invalid JSON' });
 		return;
 	}
-	// msg's static type is optimistic; JSON.parse can actually return null/non-objects here.
-	// oxlint-disable-next-line typescript/no-unnecessary-condition -- see comment above
-	if (!msg || typeof msg !== 'object' || typeof msg.type !== 'string') {
+	if (!isClientMessage(parsed)) {
 		sendTo(ws, { type: 'error', code: 'bad_message', message: 'Malformed message' });
 		return;
 	}
+	const msg = parsed;
 
 	// Not joined yet: the only acceptable message is 'join'.
 	if (ws.data.playerId === null) {
@@ -268,9 +281,8 @@ function messageHandler(ws: Socket, raw: string | Buffer): void {
 		} // silently drop
 	}
 
-	// data.code is set by handleJoin before this point is ever reached (see the early return
-	// on ws.data.playerId === null above); tsgolint can't resolve Bun's ServerWebSocket<T>
-	// generic (see the file-level oxlintrc override) so it misjudges this assertion as unnecessary.
+	// data.code is `string | null` but handleJoin sets it before this point is ever reached — see
+	// the early return on ws.data.playerId === null above.
 	manager.get(ws.data.code!)?.handleMessage(ws.data.playerId, msg);
 }
 
@@ -278,7 +290,7 @@ function closeHandler(ws: Socket): void {
 	const key = `${ws.data.code}:${ws.data.playerId}`;
 	// Identity check: after a same-name rejoin a NEW socket owns this key, and
 	// the OLD socket's close must not disconnect the player.
-	if (ws.data.playerId && registry.get(key) === ws) {
+	if (ws.data.playerId !== null && registry.get(key) === ws) {
 		registry.delete(key);
 		// See the comment on the equivalent call in messageHandler above.
 		manager.get(ws.data.code!)?.disconnect(ws.data.playerId);
@@ -289,7 +301,7 @@ function closeHandler(ws: Socket): void {
 // Server
 // ---------------------------------------------------------------------------
 
-const server = Bun.serve<SocketData, undefined>({
+const server = Bun.serve<SocketData>({
 	port: PORT,
 	fetch: fetchHandler,
 	websocket: {

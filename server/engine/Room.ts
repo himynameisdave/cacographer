@@ -35,6 +35,12 @@ export const GRACE_MS = 60_000; // disconnected player keeps slot/score this lon
 export const SYNC_MS = 5000;
 
 /**
+ * Accepted `wordSource` values. Settings arrive as untrusted wire JSON, so membership is checked
+ * at runtime — the declared `Settings['wordSource']` union says nothing about what a client sent.
+ */
+const WORD_SOURCES: ReadonlySet<Settings['wordSource']> = new Set(['builtin', 'custom', 'both']);
+
+/**
  * Opaque timer handle from `deps.schedule` — `unknown` because Node/Bun's `setTimeout`
  * return different shapes and the engine must stay transport-agnostic. `deps.cancel`'s own
  * implementation is the one place that knows the real shape and narrows it back; that's a
@@ -397,12 +403,7 @@ export class Room {
 		if ('maxPlayers' in partial) {
 			s.maxPlayers = clampSetting(partial.maxPlayers, SETTINGS_BOUNDS.maxPlayers, s.maxPlayers);
 		}
-		if (
-			'wordSource' in partial &&
-			(partial.wordSource === 'builtin' ||
-				partial.wordSource === 'custom' ||
-				partial.wordSource === 'both')
-		) {
+		if ('wordSource' in partial && WORD_SOURCES.has(partial.wordSource)) {
 			s.wordSource = partial.wordSource;
 		}
 		if ('customWords' in partial && Array.isArray(partial.customWords)) {
@@ -490,6 +491,12 @@ export class Room {
 		return this.phase === 'choosing' || this.phase === 'drawing' || this.phase === 'reveal';
 	}
 
+	/** The player the turn pointer designates, if that slot still holds one. */
+	private currentDrawer(): ServerPlayer | undefined {
+		const id = this.turnOrder[this.turnIndex];
+		return id === undefined ? undefined : this.players.get(id);
+	}
+
 	private startTurn(): void {
 		if (this.disposed) {
 			return;
@@ -502,7 +509,7 @@ export class Room {
 		// Skip drawers who are disconnected (grace slots) or gone.
 		let guard = this.turnOrder.length * this.settings.rounds + 1;
 		while (guard-- > 0) {
-			const drawer = this.players.get(this.turnOrder[this.turnIndex]);
+			const drawer = this.currentDrawer();
 			if (drawer?.connected === true) {
 				break;
 			}
@@ -511,7 +518,7 @@ export class Room {
 				return;
 			}
 		}
-		const drawer = this.players.get(this.turnOrder[this.turnIndex]);
+		const drawer = this.currentDrawer();
 		if (drawer === undefined || !drawer.connected) {
 			this.abortGame('No available drawer — back to the lobby');
 			return;
@@ -572,7 +579,9 @@ export class Room {
 			return;
 		}
 		const { choices } = this.turn;
-		this.beginDrawing(choices[Math.floor(this.deps.random() * choices.length)]);
+		// Non-empty by construction: startGame() refuses an empty word pool and wordChoiceCount
+		// clamps to SETTINGS_BOUNDS' floor of 2.
+		this.beginDrawing(choices[Math.floor(this.deps.random() * choices.length)]!);
 	}
 
 	private chooseWord(playerId: PlayerId, word: string): void {
