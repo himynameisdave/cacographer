@@ -15,7 +15,7 @@ bun run check:server  # tsc (server/**, via server/tsconfig.json)
 bun run build         # static client → build/
 ```
 
-CI (`.github/workflows/ci.yml`) runs lint → format:check → check → check:server → test → build. All six must pass; run them locally before pushing. A Husky pre-commit hook (`.husky/pre-commit` → `lint-staged`, configured in `.lintstagedrc.mjs`) already runs format, lint, and `check:server` on what you stage; `bun run check` is CI-only.
+CI (`.github/workflows/ci.yml`) runs lint → format:check → check → check:server → test → build. All six must pass; run them locally before pushing. A Husky pre-commit hook (`.husky/pre-commit`) already runs format and lint on what you stage via `lint-staged`, then `check:server` over the whole server project; `bun run check` is CI-only.
 
 **The two typecheck scopes are separate on purpose.** svelte-check's tsconfig (via `.svelte-kit/tsconfig.json`) only reaches `src/**`, and the server is a Bun process with no DOM — so `server/tsconfig.json` is standalone, owns `server/**` plus the shared `src/lib/protocol.ts`, and is what `check:server` and oxlint's type-aware mode both use. Add a file under `server/` and it's covered automatically; there is no third scope.
 

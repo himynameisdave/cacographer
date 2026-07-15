@@ -31,5 +31,14 @@
 		"svelte-check": "^4.7.2",
 		"typescript": "^6.0.3",
 		"vite": "^8.1.4"
+	},
+	"lint-staged": {
+		"*.{ts,js,mjs,cjs,svelte}": [
+			"oxfmt --write",
+			"oxlint --deny-warnings --type-aware"
+		],
+		"*.{json,md,yml,yaml,css}": [
+			"oxfmt --write"
+		]
 	}
 }
