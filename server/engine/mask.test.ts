@@ -87,7 +87,7 @@ describe('revealSchedule', () => {
 			expect(sched[i]).toBeGreaterThan(0);
 			expect(sched[i]).toBeLessThan(60_000);
 			if (i > 0) {
-				expect(sched[i]).toBeGreaterThan(sched[i - 1]);
+				expect(sched[i]).toBeGreaterThan(sched[i - 1]!);
 			}
 		}
 	});

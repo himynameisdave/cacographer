@@ -169,11 +169,13 @@ export function startedGame(
 ): { h: Harness; ids: PlayerId[] } {
 	const h = new Harness();
 	const ids = names.map((n) => h.join(n));
-	h.send(ids[0], {
+	// ids[0] is the host: the first joiner, and every caller passes a non-empty `names`.
+	const host = ids[0]!;
+	h.send(host, {
 		type: 'updateSettings',
 		settings: { wordSource: 'custom', customWords: WORDS, hintCount: 0, ...settings }
 	});
-	h.send(ids[0], { type: 'startGame' });
+	h.send(host, { type: 'startGame' });
 	return { h, ids };
 }
 
@@ -194,7 +196,7 @@ export function choicesFor(h: Harness, drawer: PlayerId): readonly string[] {
 // See the note on choicesFor above; h.send() also mutates Harness's own log via deps.send.
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- see comment above
 export function chooseWord(h: Harness, drawer: PlayerId, word?: string): string {
-	const w = word ?? choicesFor(h, drawer)[0];
+	const w = word ?? choicesFor(h, drawer)[0]!;
 	h.send(drawer, { type: 'chooseWord', word: w });
 	return w;
 }
