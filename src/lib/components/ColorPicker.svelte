@@ -1,9 +1,10 @@
 <script module lang="ts">
-	type PaletteColor = {
+	export type PaletteColor = {
 		readonly hex: string;
 		readonly name: string;
 	};
 
+	/** Default palette: the drawing colors. */
 	const PALETTE: readonly PaletteColor[] = [
 		{ hex: '#000000', name: 'Black' },
 		{ hex: '#4d4d4d', name: 'Dark Gray' },
@@ -22,12 +23,6 @@
 		{ hex: '#ec407a', name: 'Pink' },
 		{ hex: '#795548', name: 'Brown' }
 	];
-	// Doubles as the "is this hex one of the named swatches" membership check, so the active
-	// swatch and the tooltip name always agree — even when a custom pick lands on a palette hex.
-	const PALETTE_BY_HEX = new Map<string, string>();
-	for (const c of PALETTE) {
-		PALETTE_BY_HEX.set(c.hex, c.name);
-	}
 	const CUSTOM_NAME = 'Custom';
 	const TOOLTIP_MS = 1100;
 	const HEX_COLOR_RE = /^#[0-9a-f]{6}$/u;
@@ -39,18 +34,23 @@
 
 	type Props = {
 		color: string;
-		/** Whether `color` is the live drawing color (false while e.g. the eraser is selected). */
+		/** Whether `color` is the live selection (false while e.g. the eraser is selected). */
 		active: boolean;
+		/** Swatches to offer; defaults to the drawing palette. */
+		palette?: readonly PaletteColor[];
 		onselect: (hex: string) => void;
 	};
 
-	const { color, active, onselect }: Props = $props();
+	const { color, active, palette = PALETTE, onselect }: Props = $props();
 
 	let showTooltip = $state(false);
 	let tooltipTimer: ReturnType<typeof setTimeout> | null = null;
 
-	const isCustomActive = $derived(!PALETTE_BY_HEX.has(color));
-	const tooltipName = $derived(PALETTE_BY_HEX.get(color) ?? CUSTOM_NAME);
+	// Doubles as the "is this hex one of the named swatches" membership check, so the active
+	// swatch and the tooltip name always agree — even when a custom pick lands on a palette hex.
+	const byHex = $derived(new Map(palette.map((c) => [c.hex, c.name])));
+	const isCustomActive = $derived(!byHex.has(color));
+	const tooltipName = $derived(byHex.get(color) ?? CUSTOM_NAME);
 
 	function clearTooltipTimer(): void {
 		if (tooltipTimer !== null) {
@@ -86,9 +86,10 @@
 {/snippet}
 
 <div class="swatches">
-	{#each PALETTE as c (c.hex)}
+	{#each palette as c (c.hex)}
 		<div class="swatch-wrap">
 			<button
+				type="button"
 				class="swatch"
 				class:active={active && color === c.hex}
 				style="background: {c.hex}"
