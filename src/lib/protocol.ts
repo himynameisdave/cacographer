@@ -73,6 +73,10 @@ export type ClientPlayer = {
 	readonly isHost: boolean;
 	readonly connected: boolean;
 	readonly guessedThisTurn: boolean;
+	/** Self-drawn profile pic as a PNG data URL, or null if the player skipped it. */
+	readonly avatar: string | null;
+	/** Chat name color the player picked; null falls back to a client-derived color. */
+	readonly nameColor: string | null;
 };
 
 /** Recipient-safe projection of a Room. Never contains the secret word or the
@@ -109,7 +113,13 @@ export type ChatEntry = {
 // ---------------------------------------------------------------------------
 
 export type ClientMessage =
-	| { readonly type: 'join'; readonly code: string; readonly name: string }
+	| {
+			readonly type: 'join';
+			readonly code: string;
+			readonly name: string;
+			readonly avatar: string | null; // PNG data URL (see ClientPlayer.avatar)
+			readonly nameColor: string | null;
+	  }
 	| { readonly type: 'updateSettings'; readonly settings: Partial<Settings> }
 	| { readonly type: 'startGame' }
 	| { readonly type: 'chooseWord'; readonly word: string }
@@ -181,7 +191,8 @@ export const LIMITS = {
 	customWordsTotal: 200,
 	customWordLength: 32,
 	pointsPerOp: 512,
-	opsPerTurn: 3000
+	opsPerTurn: 3000,
+	avatarLength: 32_768 // max data-URL characters; a hand-drawn PNG is a few KB
 } as const;
 
 export const SETTINGS_BOUNDS = {
