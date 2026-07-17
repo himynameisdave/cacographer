@@ -1,14 +1,23 @@
 <script lang="ts">
-	import { LIMITS, type ChatEntry } from '$lib/protocol';
+	import { type PlayerIdentity } from '$lib/game.svelte';
+	import { LIMITS, type ChatEntry, type PlayerId } from '$lib/protocol';
 
 	type Props = {
 		entries: ChatEntry[];
+		/** Per-player avatar + picked name color, looked up by chat entry sender id. */
+		identities: Readonly<Record<PlayerId, PlayerIdentity>>;
 		placeholder?: string;
 		disabled?: boolean;
 		onsend: (text: string) => void;
 	};
 
-	const { entries, placeholder = 'Say something…', disabled = false, onsend }: Props = $props();
+	const {
+		entries,
+		identities,
+		placeholder = 'Say something…',
+		disabled = false,
+		onsend
+	}: Props = $props();
 
 	let listEl = $state<HTMLDivElement>();
 	let draft = $state('');
@@ -37,11 +46,20 @@
 		if (!id) {
 			return 'var(--text-muted)';
 		}
+		const picked = identities[id]?.color ?? null;
+		if (picked !== null) {
+			return picked;
+		}
+		// No picked color — derive a stable one from the player id.
 		let h = 0;
 		for (let i = 0; i < id.length; i++) {
 			h = (h * 31 + (id.codePointAt(i) ?? 0)) % 4_294_967_296;
 		}
 		return `hsl(${h % 360}, 65%, 72%)`;
+	}
+
+	function avatarFor(id: string | null): string | null {
+		return id === null ? null : (identities[id]?.avatar ?? null);
 	}
 </script>
 
@@ -50,14 +68,11 @@
 		{#each entries as entry, i (i)}
 			{#if entry.scope === 'system'}
 				<div class="msg system">{entry.text}</div>
-			{:else if entry.scope === 'guessed'}
-				<div class="msg guessed">
-					<span class="tag">🔒</span>
-					<span class="name" style="color: {nameColor(entry.id)}">{entry.name}</span>
-					<span class="text">{entry.text}</span>
-				</div>
 			{:else}
-				<div class="msg">
+				{@const avatar = avatarFor(entry.id)}
+				<div class="msg" class:guessed={entry.scope === 'guessed'}>
+					{#if entry.scope === 'guessed'}<span class="tag">🔒</span>{/if}
+					{#if avatar !== null}<img class="avatar" src={avatar} alt="" />{/if}
 					<span class="name" style="color: {nameColor(entry.id)}">{entry.name}</span>
 					<span class="text">{entry.text}</span>
 				</div>
@@ -101,6 +116,16 @@
 		border-radius: 6px;
 		font-size: 0.88rem;
 		overflow-wrap: anywhere;
+	}
+
+	.msg .avatar {
+		width: 18px;
+		height: 18px;
+		border-radius: 4px;
+		background: #ffffff;
+		border: 1px solid var(--border-soft);
+		vertical-align: -4px;
+		margin-right: 0.35rem;
 	}
 
 	.msg .name {

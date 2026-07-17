@@ -44,6 +44,12 @@ function scoreFor(totals: Readonly<Record<PlayerId, number>>, id: PlayerId): num
 	return totals[id];
 }
 
+/** How a player presents in chat: their self-drawn avatar and picked name color. */
+export type PlayerIdentity = {
+	avatar: string | null;
+	color: string | null;
+};
+
 /**
  * Client-side mirror of the room, maintained incrementally from server
  * messages. `roomState` broadcasts are the resync source of truth — every
@@ -62,6 +68,9 @@ export class GameState {
 	voteCounts = $state<{ likes: number; dislikes: number }>({ likes: 0, dislikes: 0 });
 	/** My vote on the drawing being revealed — local echo only, the server is authoritative. */
 	myVote = $state<VoteKind | null>(null);
+	/** Last-seen profile per player id — never pruned, so chat history keeps its
+	 * avatars and name colors after a player leaves the roster. */
+	identities = $state<Record<PlayerId, PlayerIdentity>>({});
 	/** Briefly true after an almost-correct guess ("So close!"). */
 	closeFlash = $state(false);
 	status = $state<SocketStatus>('closed');
@@ -98,6 +107,7 @@ export class GameState {
 			case 'joined': {
 				this.you = msg.you;
 				this.room = toMutable(msg.room);
+				this.rememberIdentities(msg.room.players);
 				this.fatalError = null;
 				// If we're the drawer and we dropped, the server ended our turn —
 				// stale secrets from a previous connection can't apply anymore.
@@ -108,6 +118,7 @@ export class GameState {
 
 			case 'roomState': {
 				this.room = toMutable(msg.room);
+				this.rememberIdentities(msg.room.players);
 				if (msg.room.phase !== 'choosing') {
 					this.choices = null;
 				}
@@ -118,6 +129,7 @@ export class GameState {
 			}
 
 			case 'playerJoined': {
+				this.rememberIdentities([msg.player]);
 				const { room } = this;
 				if (!room) {
 					break;
@@ -319,6 +331,12 @@ export class GameState {
 				}
 				break;
 			}
+		}
+	}
+
+	private rememberIdentities(players: readonly ClientPlayer[]): void {
+		for (const p of players) {
+			this.identities[p.id] = { avatar: p.avatar, color: p.nameColor };
 		}
 	}
 
