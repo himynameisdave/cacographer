@@ -61,11 +61,14 @@
 <main class="home">
 	<header class="hero">
 		<h1>Cacographer</h1>
-		<p class="tagline">
-			<span class="pron">/kəˈkɒɡ.rə.fər/</span>
-			<span class="pos">noun</span>
-			<span class="def">someone who is bad at spelling or handwriting</span>
-		</p>
+		<div class="entry">
+			<p class="entry-head">
+				<span class="headword">ca·cog·ra·pher</span>
+				<span class="pron">/kəˈkɒɡ.rə.fər/</span>
+			</p>
+			<p class="pos">noun</p>
+			<p class="sense"><span class="sense-num">1.</span> someone who is bad at spelling or handwriting</p>
+		</div>
 	</header>
 
 	<div class="cards">
@@ -129,31 +132,55 @@
 		color: transparent;
 	}
 
-	/* Dictionary-entry tagline: pronunciation, part of speech, then the definition. */
-	.tagline {
-		margin-top: 0.4rem;
-		color: var(--text-muted);
-		font-size: 1rem;
+	/* Dictionary-entry tagline, set like a page out of a real dictionary: serif
+	   headword with syllable dots, pronunciation, part of speech, numbered sense. */
+	.entry {
+		--serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, 'Times New Roman', serif;
+		margin: 1rem auto 0;
+		width: min(26rem, 100%);
+		text-align: left;
+		font-family: var(--serif);
+		background: var(--bg-soft);
+		border: 1px solid var(--border-soft);
+		border-radius: var(--radius-sm);
+		padding: 0.9rem 1.1rem 1rem;
+	}
+
+	.entry-head {
 		display: flex;
 		flex-wrap: wrap;
-		justify-content: center;
 		align-items: baseline;
-		column-gap: 0.5rem;
+		column-gap: 0.6rem;
+	}
+
+	.headword {
+		font-weight: 700;
+		font-size: 1.25rem;
+		letter-spacing: 0.01em;
 	}
 
 	.pron {
-		font-family: var(--mono);
-		font-size: 0.9rem;
 		color: var(--text-faint);
+		font-size: 0.95rem;
 	}
 
 	.pos {
 		font-style: italic;
-		color: var(--text-faint);
+		color: var(--text-muted);
+		font-size: 0.95rem;
+		margin-top: 0.1rem;
 	}
 
-	.def {
-		font-style: italic;
+	.sense {
+		margin-top: 0.35rem;
+		color: var(--text-muted);
+		font-size: 1rem;
+		line-height: 1.45;
+	}
+
+	.sense-num {
+		font-weight: 700;
+		color: var(--text);
 	}
 
 	.cards {
