@@ -32,6 +32,8 @@ export const CHOOSE_MS = 15_000;
 export const REVEAL_MS = 6000;
 export const SKIP_REVEAL_MS = 2500; // shorter interstitial when a turn is skipped
 export const GRACE_MS = 60_000; // disconnected player keeps slot/score this long
+// Correct guess this close behind another one earns the jeer.
+export const YOURE_GONNA_HAVE_TO_BE_FASTER_THAN_THAT_MS = 1000;
 export const SYNC_MS = 5000;
 
 /**
@@ -702,12 +704,27 @@ export class Room {
 		const { word } = this.turn;
 
 		if (guess === word) {
+			const now = this.deps.now();
+			// Landing just behind someone else's correct guess earns the "too slow" jeer.
+			let lastGuessMs: number | null = null;
+			for (const p of this.players.values()) {
+				if (p.guessedAtMs !== null && (lastGuessMs === null || p.guessedAtMs > lastGuessMs)) {
+					lastGuessMs = p.guessedAtMs;
+				}
+			}
+			const youreGonnaHaveToBeFasterThanThat =
+				lastGuessMs !== null && now - lastGuessMs <= YOURE_GONNA_HAVE_TO_BE_FASTER_THAN_THAT_MS;
 			player.guessedThisTurn = true;
-			player.guessedAtMs = this.deps.now();
+			player.guessedAtMs = now;
 			player.guessOrder = [...this.players.values()].filter(
 				(p: Readonly<ServerPlayer>) => p.guessOrder !== null
 			).length;
-			this.deps.send(playerId, { type: 'guessResult', correct: true });
+			this.deps.send(
+				playerId,
+				youreGonnaHaveToBeFasterThanThat
+					? { type: 'guessResult', correct: true, youreGonnaHaveToBeFasterThanThat: true }
+					: { type: 'guessResult', correct: true }
+			);
 			this.broadcast({ type: 'playerGuessed', id: playerId });
 			this.systemChat(`${player.name} guessed the word!`);
 			this.checkAllGuessed();

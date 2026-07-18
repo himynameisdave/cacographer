@@ -12,6 +12,7 @@ import { type SocketStatus } from '$lib/realtime/client';
 
 const CHAT_CAP = 200;
 const CLOSE_FLASH_MS = 2500;
+const YOURE_GONNA_HAVE_TO_BE_FASTER_THAN_THAT_FLASH_MS = 3000;
 
 /** Errors that mean the join itself failed (server closes the socket after). */
 const JOIN_ERRORS: ReadonlySet<ErrorCode> = new Set(['room_not_found', 'room_full', 'name_taken']);
@@ -73,10 +74,13 @@ export class GameState {
 	identities = $state<Record<PlayerId, PlayerIdentity>>({});
 	/** Briefly true after an almost-correct guess ("So close!"). */
 	closeFlash = $state(false);
+	/** Briefly true after a correct guess that landed just behind someone else's. */
+	youreGonnaHaveToBeFasterThanThatFlash = $state(false);
 	status = $state<SocketStatus>('closed');
 	fatalError = $state<{ code: ErrorCode; message: string } | null>(null);
 
 	private closeFlashTimer: ReturnType<typeof setTimeout> | null = null;
+	private fasterThanThatTimer: ReturnType<typeof setTimeout> | null = null;
 
 	get me(): ClientPlayer | null {
 		return this.room?.players.find((p) => p.id === this.you) ?? null;
@@ -249,6 +253,16 @@ export class GameState {
 						this.closeFlash = false;
 						this.closeFlashTimer = null;
 					}, CLOSE_FLASH_MS);
+				}
+				if (msg.correct && msg.youreGonnaHaveToBeFasterThanThat === true) {
+					this.youreGonnaHaveToBeFasterThanThatFlash = true;
+					if (this.fasterThanThatTimer !== null) {
+						clearTimeout(this.fasterThanThatTimer);
+					}
+					this.fasterThanThatTimer = setTimeout(() => {
+						this.youreGonnaHaveToBeFasterThanThatFlash = false;
+						this.fasterThanThatTimer = null;
+					}, YOURE_GONNA_HAVE_TO_BE_FASTER_THAN_THAT_FLASH_MS);
 				}
 				break;
 			}
