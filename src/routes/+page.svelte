@@ -82,7 +82,7 @@
 			</div>
 			<p class="pos">noun</p>
 			<p class="sense"><span class="sense-num">1.</span> someone who is bad at spelling or handwriting</p>
-			<p class="sense sense-alive"><span class="sense-num">2.</span> someone who can draw funny pictures</p>
+			<p class="sense"><span class="sense-num">2.</span> someone who can draw funny pictures</p>
 		</div>
 	</header>
 
@@ -193,29 +193,6 @@
 		color: var(--text);
 	}
 
-	/* Sense 2 is the joke — let it breathe and wobble so it reads as the punchline. */
-	.sense-alive {
-		width: fit-content;
-		transform-origin: left center;
-		animation: sense-wobble 2.2s ease-in-out infinite;
-	}
-
-	@keyframes sense-wobble {
-		0%,
-		100% {
-			transform: scale(1) rotate(-0.8deg);
-		}
-		50% {
-			transform: scale(1.04) rotate(0.8deg);
-		}
-	}
-
-	@media (prefers-reduced-motion: reduce) {
-		.sense-alive {
-			animation: none;
-		}
-	}
-
 	/* Same width as .entry above so the outer edges line up as one grid. */
 	.cards {
 		display: grid;
@@ -264,11 +241,11 @@
 	@keyframes splash-pulse {
 		0%,
 		100% {
-			transform: scale(1);
+			transform: scale(1) rotate(-1.2deg);
 			opacity: 0.75;
 		}
 		50% {
-			transform: scale(1.045);
+			transform: scale(1.045) rotate(1.2deg);
 			opacity: 1;
 		}
 	}
