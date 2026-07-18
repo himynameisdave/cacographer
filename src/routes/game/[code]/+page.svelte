@@ -329,6 +329,12 @@
 						<div class="close-flash">So close!</div>
 					{/if}
 
+					{#if gs.youreGonnaHaveToBeFasterThanThatFlash}
+						<div class="faster-flash">
+							YOU'RE GONNA HAVE TO BE<br /><span class="faster-big">FASTER THAN THAT</span>
+						</div>
+					{/if}
+
 					{#if room.phase === 'choosing'}
 						<div class="overlay">
 							{#if gs.isDrawer && gs.choices}
@@ -882,6 +888,60 @@
 		border-radius: 999px;
 		box-shadow: var(--shadow);
 		animation: pop 200ms ease-out;
+	}
+
+	/* The "guessed it a hair too late" jeer — an over-the-top rubber stamp slammed
+	   onto the board, wobbling with residual outrage. */
+	.faster-flash {
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		z-index: 6;
+		transform: translate(-50%, -50%) rotate(-7deg);
+		background: var(--danger);
+		color: #2a0808;
+		font-weight: 900;
+		font-size: 1.3rem;
+		line-height: 1.25;
+		letter-spacing: 0.04em;
+		text-align: center;
+		text-transform: uppercase;
+		padding: 0.9rem 1.4rem;
+		border: 4px dashed #2a0808;
+		border-radius: 10px;
+		box-shadow: var(--shadow);
+		animation:
+			stamp 250ms cubic-bezier(0.2, 2.2, 0.4, 1),
+			wobble 450ms 250ms ease-in-out 3;
+		pointer-events: none;
+	}
+
+	.faster-big {
+		font-size: 1.9rem;
+	}
+
+	@keyframes stamp {
+		from {
+			transform: translate(-50%, -50%) rotate(-20deg) scale(2.4);
+			opacity: 0;
+		}
+		to {
+			transform: translate(-50%, -50%) rotate(-7deg) scale(1);
+			opacity: 1;
+		}
+	}
+
+	@keyframes wobble {
+		0%,
+		100% {
+			transform: translate(-50%, -50%) rotate(-7deg);
+		}
+		25% {
+			transform: translate(-50%, -50%) rotate(-4deg);
+		}
+		75% {
+			transform: translate(-50%, -50%) rotate(-10deg);
+		}
 	}
 
 	@keyframes pop {
