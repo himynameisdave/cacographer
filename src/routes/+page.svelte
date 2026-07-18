@@ -60,12 +60,11 @@
 
 <main class="home">
 	<header class="hero">
-		<h1>Cacographer</h1>
 		<div class="entry">
-			<p class="entry-head">
-				<span class="headword">ca·cog·ra·pher</span>
+			<div class="entry-head">
+				<h1 class="headword">ca·cog·ra·pher</h1>
 				<span class="pron">/kəˈkɒɡ.rə.fər/</span>
-			</p>
+			</div>
 			<p class="pos">noun</p>
 			<p class="sense"><span class="sense-num">1.</span> someone who is bad at spelling or handwriting</p>
 		</div>
@@ -122,59 +121,54 @@
 		text-align: center;
 	}
 
-	h1 {
-		font-size: clamp(2.6rem, 8vw, 4.2rem);
-		font-weight: 800;
-		letter-spacing: -0.03em;
-		background: linear-gradient(120deg, var(--accent) 30%, #f97316 100%);
-		-webkit-background-clip: text;
-		background-clip: text;
-		color: transparent;
-	}
-
-	/* Dictionary-entry tagline, set like a page out of a real dictionary: serif
-	   headword with syllable dots, pronunciation, part of speech, numbered sense. */
+	/* The hero IS the dictionary entry, set like a page out of a real dictionary:
+	   serif headword with syllable dots, pronunciation, part of speech, numbered sense. */
 	.entry {
 		--serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, 'Times New Roman', serif;
-		margin: 1rem auto 0;
-		width: min(26rem, 100%);
+		margin: 0 auto;
+		width: min(44rem, 100%);
 		text-align: left;
 		font-family: var(--serif);
 		background: var(--bg-soft);
 		border: 1px solid var(--border-soft);
-		border-radius: var(--radius-sm);
-		padding: 0.9rem 1.1rem 1rem;
+		border-radius: var(--radius);
+		padding: 1.75rem 2rem 2rem;
 	}
 
 	.entry-head {
 		display: flex;
 		flex-wrap: wrap;
 		align-items: baseline;
-		column-gap: 0.6rem;
+		column-gap: 1rem;
 	}
 
 	.headword {
+		font-family: var(--serif);
 		font-weight: 700;
-		font-size: 1.25rem;
+		font-size: clamp(2.2rem, 7vw, 3.4rem);
 		letter-spacing: 0.01em;
+		background: linear-gradient(120deg, var(--accent) 30%, #f97316 100%);
+		-webkit-background-clip: text;
+		background-clip: text;
+		color: transparent;
 	}
 
 	.pron {
 		color: var(--text-faint);
-		font-size: 0.95rem;
+		font-size: 1.25rem;
 	}
 
 	.pos {
 		font-style: italic;
 		color: var(--text-muted);
-		font-size: 0.95rem;
-		margin-top: 0.1rem;
+		font-size: 1.2rem;
+		margin-top: 0.3rem;
 	}
 
 	.sense {
-		margin-top: 0.35rem;
+		margin-top: 0.6rem;
 		color: var(--text-muted);
-		font-size: 1rem;
+		font-size: 1.35rem;
 		line-height: 1.45;
 	}
 
