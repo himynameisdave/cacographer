@@ -330,8 +330,11 @@
 					{/if}
 
 					{#if gs.youreGonnaHaveToBeFasterThanThatFlash}
-						<div class="faster-flash">
-							YOU'RE GONNA HAVE TO BE<br /><span class="faster-big">FASTER THAN THAT</span>
+						<!-- Starburst inherits the guesser's own name color — it's their jeer, after all. -->
+						<div class="faster-flash" style="--flash-bg: {gs.me?.nameColor ?? 'var(--danger)'}">
+							<div class="faster-text">
+								YOU'RE GONNA<br />HAVE TO BE<br /><span class="faster-big">FASTER<br />THAN THAT</span>
+							</div>
 						</div>
 					{/if}
 
@@ -890,34 +893,70 @@
 		animation: pop 200ms ease-out;
 	}
 
-	/* The "guessed it a hair too late" jeer — an over-the-top rubber stamp slammed
-	   onto the board, wobbling with residual outrage. */
+	/* The "guessed it a hair too late" jeer — a starburst seal slammed onto the
+	   board, wobbling with residual outrage. Filled with the guesser's name color
+	   (--flash-bg); the clip-path is a 14-point star. */
 	.faster-flash {
 		position: absolute;
 		top: 50%;
 		left: 50%;
 		z-index: 6;
 		transform: translate(-50%, -50%) rotate(-7deg);
-		background: var(--danger);
-		color: #2a0808;
-		font-weight: 900;
-		font-size: 1.3rem;
-		line-height: 1.25;
-		letter-spacing: 0.04em;
-		text-align: center;
-		text-transform: uppercase;
-		padding: 0.9rem 1.4rem;
-		border: 4px dashed #2a0808;
-		border-radius: 10px;
-		box-shadow: var(--shadow);
+		width: min(19rem, 80%);
+		aspect-ratio: 1;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: var(--flash-bg);
+		clip-path: polygon(
+			50% 0%,
+			58.68% 11.98%,
+			71.69% 4.95%,
+			74.32% 19.51%,
+			89.09% 18.83%,
+			85.14% 33.08%,
+			98.75% 38.87%,
+			89% 50%,
+			98.75% 61.13%,
+			85.14% 66.92%,
+			89.09% 81.17%,
+			74.32% 80.49%,
+			71.69% 95.05%,
+			58.68% 88.02%,
+			50% 100%,
+			41.32% 88.02%,
+			28.31% 95.05%,
+			25.68% 80.49%,
+			10.91% 81.17%,
+			14.86% 66.92%,
+			1.25% 61.13%,
+			11% 50%,
+			1.25% 38.87%,
+			14.86% 33.08%,
+			10.91% 18.83%,
+			25.68% 19.51%,
+			28.31% 4.95%,
+			41.32% 11.98%
+		);
 		animation:
 			stamp 250ms cubic-bezier(0.2, 2.2, 0.4, 1),
 			wobble 450ms 250ms ease-in-out 3;
 		pointer-events: none;
 	}
 
+	.faster-text {
+		transform: rotate(-4deg);
+		color: #1c1c24;
+		font-weight: 900;
+		font-size: 1rem;
+		line-height: 1.3;
+		letter-spacing: 0.04em;
+		text-align: center;
+		text-transform: uppercase;
+	}
+
 	.faster-big {
-		font-size: 1.9rem;
+		font-size: 1.55rem;
 	}
 
 	@keyframes stamp {
