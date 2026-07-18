@@ -72,7 +72,11 @@
 				{@const avatar = avatarFor(entry.id)}
 				<div class="msg" class:guessed={entry.scope === 'guessed'}>
 					{#if entry.scope === 'guessed'}<span class="tag">🔒</span>{/if}
-					{#if avatar !== null}<img class="avatar" src={avatar} alt="" />{/if}
+					{#if avatar !== null}
+						<img class="avatar" src={avatar} alt="" />
+					{:else}
+						<span class="avatar placeholder">{entry.name.slice(0, 1).toUpperCase()}</span>
+					{/if}
 					<span class="name" style="color: {nameColor(entry.id)}">{entry.name}</span>
 					<span class="text">{entry.text}</span>
 				</div>
@@ -126,6 +130,16 @@
 		border: 1px solid var(--border-soft);
 		vertical-align: -6px;
 		margin-right: 0.35rem;
+	}
+
+	.msg .avatar.placeholder {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		background: var(--bg-inset);
+		color: var(--text-faint);
+		font-weight: 700;
+		font-size: 0.7rem;
 	}
 
 	.msg .name {
