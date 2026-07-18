@@ -6,10 +6,12 @@ import {
 	type Settings,
 	type VoteKind
 } from '../../src/lib/protocol';
+import { POTTY_PHRASES } from './moderation';
 import {
 	CHOOSE_MS,
 	GRACE_MS,
 	REDO_LIMIT,
+	REPEAT_LIMIT,
 	REVEAL_MS,
 	SKIP_REVEAL_MS,
 	SYNC_MS,
@@ -532,6 +534,228 @@ describe('guessing', () => {
 		expect(h.typeTo(d, 'guessResult')).toEqual([
 			{ type: 'guessResult', correct: true, youreGonnaHaveToBeFasterThanThat: true }
 		]);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Chat moderation: repeat limit + potty-mouth filter
+// ---------------------------------------------------------------------------
+
+describe('repeat limit', () => {
+	test('the same message is blocked after REPEAT_LIMIT sends; fresh material still flows', () => {
+		const h = new Harness();
+		const a = h.join('Alice');
+		const b = h.join('Bob');
+		h.clear();
+		for (let i = 0; i < REPEAT_LIMIT; i++) {
+			h.send(a, { type: 'chat', text: 'nice' });
+		}
+		expect(h.chatsTo(b)).toHaveLength(REPEAT_LIMIT);
+		expect(h.typeTo(a, 'error')).toHaveLength(0);
+
+		h.send(a, { type: 'chat', text: 'nice' });
+		expect(h.chatsTo(b)).toHaveLength(REPEAT_LIMIT); // the 16th never lands
+		const errs = h.typeTo(a, 'error');
+		expect(errs).toHaveLength(1);
+		expect(errs[0]!.code).toBe('rate_limited');
+
+		h.send(a, { type: 'chat', text: 'fresh material' });
+		expect(h.chatsTo(b)).toHaveLength(REPEAT_LIMIT + 1);
+	});
+
+	test('repeats are counted per normalized text and per player', () => {
+		const h = new Harness();
+		const a = h.join('Alice');
+		const b = h.join('Bob');
+		h.clear();
+		for (let i = 0; i < REPEAT_LIMIT; i++) {
+			h.send(a, { type: 'chat', text: i % 2 === 0 ? 'GG  everyone' : '  gg everyone ' });
+		}
+		h.send(a, { type: 'chat', text: 'gg everyone' });
+		expect(h.typeTo(a, 'error')[0]!.code).toBe('rate_limited');
+
+		// Alice exhausting her count leaves Bob's untouched.
+		h.send(b, { type: 'chat', text: 'gg everyone' });
+		expect(h.chatsTo(a).filter((e) => e.id === b)).toHaveLength(1);
+		expect(h.typeTo(b, 'error')).toHaveLength(0);
+	});
+
+	test('a correct guess is never repeat-blocked, even after heavy lobby spam', () => {
+		const h = new Harness();
+		const a = h.join('Alice');
+		const b = h.join('Bob');
+		h.send(a, {
+			type: 'updateSettings',
+			settings: { wordSource: 'custom', customWords: ['apple'], hintCount: 0 }
+		});
+		for (let i = 0; i < REPEAT_LIMIT; i++) {
+			h.send(b, { type: 'chat', text: 'apple' });
+		}
+		h.send(a, { type: 'startGame' });
+		chooseWord(h, a); // only choice: 'apple'
+		h.clear();
+
+		h.send(b, { type: 'guess', text: 'apple' });
+		expect(h.typeTo(b, 'guessResult')).toEqual([{ type: 'guessResult', correct: true }]);
+		expect(h.typeTo(b, 'error')).toHaveLength(0);
+	});
+
+	test('unique messages are never blocked by the tracking cap', () => {
+		const h = new Harness();
+		const a = h.join('Alice');
+		const b = h.join('Bob');
+		h.clear();
+		// 520 distinct messages — past the 500-entry per-player tracking cap.
+		for (let i = 0; i < 520; i++) {
+			h.send(a, { type: 'chat', text: `msg ${i}` });
+		}
+		expect(h.typeTo(a, 'error')).toHaveLength(0);
+		expect(h.chatsTo(b)).toHaveLength(520);
+	});
+});
+
+describe('potty-mouth filter', () => {
+	test('a profane lobby message is replaced with a phrase for everyone', () => {
+		const h = new Harness();
+		const a = h.join('Alice');
+		const b = h.join('Bob');
+		h.clear();
+		h.send(b, { type: 'chat', text: 'this is bullshit' });
+		for (const id of [a, b]) {
+			const chats = h.chatsTo(id);
+			expect(chats).toHaveLength(1);
+			expect(chats[0]!.id).toBe(b);
+			expect(chats[0]!.name).toBe('Bob');
+			expect(chats[0]!.scope).toBe('all');
+			expect(chats[0]!.filtered).toBe(true);
+			expect(POTTY_PHRASES).toContain(chats[0]!.text);
+			expect(chats[0]!.text).not.toContain('bullshit');
+		}
+	});
+
+	test('the replacement phrase shuffles with the rng', () => {
+		const h = new Harness();
+		h.join('Alice');
+		const b = h.join('Bob');
+		h.clear();
+		h.randQueue.push(0.05, 0.95);
+		h.send(b, { type: 'chat', text: 'well shit' });
+		h.send(b, { type: 'chat', text: 'oh fuck' });
+		const chats = h.chatsTo(b);
+		expect(chats).toHaveLength(2);
+		expect(chats[0]!.text).not.toBe(chats[1]!.text);
+		expect(POTTY_PHRASES).toContain(chats[0]!.text);
+		expect(POTTY_PHRASES).toContain(chats[1]!.text);
+	});
+
+	test('a profane wrong guess mid-drawing is replaced before broadcast', () => {
+		const { h, a, b, c } = drawingTrio();
+		h.send(c, { type: 'guess', text: 'fucking impossible' });
+		for (const id of [a, b, c]) {
+			const chats = h.chatsTo(id);
+			expect(chats).toHaveLength(1);
+			expect(chats[0]!.scope).toBe('all');
+			expect(chats[0]!.filtered).toBe(true);
+			expect(POTTY_PHRASES).toContain(chats[0]!.text);
+			expect(chats[0]!.text).not.toContain('fucking');
+		}
+		expect(h.typeTo(c, 'guessResult')).toHaveLength(0);
+		expect(h.room.players.get(c)!.guessedThisTurn).toBe(false);
+	});
+
+	test('drawer profanity funnels into the guessed channel, filtered', () => {
+		const { h, a, b, c } = drawingTrio();
+		h.send(a, { type: 'chat', text: 'fuck I cannot draw' });
+		const toDrawer = h.chatsTo(a);
+		expect(toDrawer).toHaveLength(1);
+		expect(toDrawer[0]!.scope).toBe('guessed');
+		expect(toDrawer[0]!.filtered).toBe(true);
+		expect(POTTY_PHRASES).toContain(toDrawer[0]!.text);
+		expect(h.chatsTo(b)).toHaveLength(0);
+		expect(h.chatsTo(c)).toHaveLength(0);
+	});
+
+	test('a profane custom word is guessable and its guess is never filtered', () => {
+		const h = new Harness();
+		const a = h.join('Alice');
+		const b = h.join('Bob');
+		h.send(a, {
+			type: 'updateSettings',
+			settings: { wordSource: 'custom', customWords: ['shit'], hintCount: 0 }
+		});
+		h.send(a, { type: 'startGame' });
+		chooseWord(h, a); // only choice: 'shit'
+		h.clear();
+
+		h.send(b, { type: 'guess', text: 'shit' });
+		expect(h.typeTo(b, 'guessResult')).toEqual([{ type: 'guessResult', correct: true }]);
+		const system = h.chatsTo(a).filter((e) => e.scope === 'system');
+		expect(system.some((e) => e.text === 'Bob guessed the word!')).toBe(true);
+		expect(h.log.some((s) => s.msg.type === 'chat' && s.msg.entry.filtered === true)).toBe(false);
+	});
+
+	test('a wrong guess sharing the profane answer token passes unfiltered', () => {
+		const h = new Harness();
+		const a = h.join('Alice');
+		const b = h.join('Bob');
+		h.send(a, {
+			type: 'updateSettings',
+			settings: { wordSource: 'custom', customWords: ['shit show'], hintCount: 0 }
+		});
+		h.send(a, { type: 'startGame' });
+		chooseWord(h, a); // only choice: 'shit show'
+		h.clear();
+
+		h.send(b, { type: 'guess', text: 'shit' });
+		let chats = h.chatsTo(a);
+		expect(chats).toHaveLength(1);
+		expect(chats[0]!.text).toBe('shit');
+		expect(chats[0]!.scope).toBe('all');
+		expect(chats[0]!.filtered).toBeUndefined();
+
+		// A swear that is not part of the answer still trips the filter.
+		h.clear();
+		h.send(b, { type: 'guess', text: 'fucking hell' });
+		chats = h.chatsTo(a);
+		expect(chats[0]!.filtered).toBe(true);
+		expect(POTTY_PHRASES).toContain(chats[0]!.text);
+	});
+
+	test('once revealed, the profane answer is fair game in chat', () => {
+		const h = new Harness();
+		const a = h.join('Alice');
+		const b = h.join('Bob');
+		h.send(a, {
+			type: 'updateSettings',
+			settings: { wordSource: 'custom', customWords: ['shit'], hintCount: 0 }
+		});
+		h.send(a, { type: 'startGame' });
+		chooseWord(h, a);
+		h.send(b, { type: 'guess', text: 'shit' }); // correct → everyone guessed → reveal
+		expect(h.room.phase).toBe('reveal');
+		h.clear();
+
+		h.send(b, { type: 'chat', text: 'shit happens' });
+		expect(h.chatsTo(a)).toEqual([{ id: b, name: 'Bob', text: 'shit happens', scope: 'all' }]);
+
+		h.send(b, { type: 'chat', text: 'fuck yes' });
+		expect(h.chatsTo(a).at(-1)!.filtered).toBe(true);
+	});
+
+	test('a repeated profane message is counted by its original text and eventually blocked', () => {
+		const h = new Harness();
+		const a = h.join('Alice');
+		const b = h.join('Bob');
+		h.clear();
+		for (let i = 0; i < REPEAT_LIMIT; i++) {
+			h.send(a, { type: 'chat', text: 'fuck' });
+		}
+		expect(h.chatsTo(b)).toHaveLength(REPEAT_LIMIT);
+		expect(h.chatsTo(b).every((e) => e.filtered === true)).toBe(true);
+
+		h.send(a, { type: 'chat', text: 'fuck' });
+		expect(h.chatsTo(b)).toHaveLength(REPEAT_LIMIT);
+		expect(h.typeTo(a, 'error')[0]!.code).toBe('rate_limited');
 	});
 });
 
