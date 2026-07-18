@@ -56,7 +56,18 @@
 		'Werk of art. Emphasis on werk.',
 		'Dazzle them. Or at least confuse them on purpose.',
 		'The pen tool fears you. It should.',
-		'Paint them a picture. A terrible, terrible picture.'
+		'Paint them a picture. A terrible, terrible picture.',
+		"Dave can't spell too good, so don't lose to him.",
+		'Close only counts in horseshoes and "restarant".',
+		'You typed "girrafe" three times. The word was on screen.',
+		'Spelling counts. Unfortunately.',
+		'Its. It\'s. Whatever. Just guess faster.',
+		'Autocorrect cannot reach you here. Godspeed.',
+		'The word is "necessary". Good luck.',
+		'One C, two S’s, zero chance.',
+		'You spelled it wrong with the answer half-revealed.',
+		'Whom among us can spell "bureaucracy" under pressure?',
+		'Silent letters are the real opps.'
 	];
 	const splash = SPLASHES[Math.floor(Math.random() * SPLASHES.length)];
 
