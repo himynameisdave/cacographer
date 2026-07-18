@@ -2,9 +2,11 @@
 
 [![CI](https://github.com/himynameisdave/cacographer/actions/workflows/ci.yml/badge.svg)](https://github.com/himynameisdave/cacographer/actions/workflows/ci.yml)
 
+**cacographer** `/kəˈkɒɡ.rə.fər/` _noun_ — _someone who is bad at spelling or handwriting._
+
 If Core built skribbl.
 
-A real-time multiplayer drawing-and-guessing game for a trusted group of coworkers. One player draws a secret word, everyone else races to guess it in chat. No accounts, no database — share a link, play, done.
+A real-time multiplayer drawing-and-guessing game for a trusted group of coworkers. One player at a time is the artist, the rest are simple cacographers — racing to guess the word in chat. No accounts, no database — share a link, play, done.
 
 **Stack:** Bun · SvelteKit 5 (runes) · Bun-native WebSockets · in-memory game state. See [docs/PRD.md](docs/PRD.md) for product scope and [docs/TRD.md](docs/TRD.md) for the technical design.
 
