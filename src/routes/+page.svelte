@@ -82,6 +82,7 @@
 			</div>
 			<p class="pos">noun</p>
 			<p class="sense"><span class="sense-num">1.</span> someone who is bad at spelling or handwriting</p>
+			<p class="sense"><span class="sense-num">2.</span> someone who can draw funny pictures</p>
 		</div>
 	</header>
 

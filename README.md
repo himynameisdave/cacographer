@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/himynameisdave/cacographer/actions/workflows/ci.yml/badge.svg)](https://github.com/himynameisdave/cacographer/actions/workflows/ci.yml)
 
-**cacographer** `/kəˈkɒɡ.rə.fər/` _noun_ — _someone who is bad at spelling or handwriting._
+**cacographer** `/kəˈkɒɡ.rə.fər/` _noun_ — **1.** _someone who is bad at spelling or handwriting._ **2.** _someone who can draw funny pictures._
 
 If Core built skribbl.
 
