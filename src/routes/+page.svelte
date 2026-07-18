@@ -117,16 +117,16 @@
 		padding: 2rem 1rem;
 	}
 
+	/* Same width as .cards below so the hero entry sits on the same grid lines. */
 	.hero {
-		text-align: center;
+		width: min(44rem, 100%);
 	}
 
 	/* The hero IS the dictionary entry, set like a page out of a real dictionary:
 	   serif headword with syllable dots, pronunciation, part of speech, numbered sense. */
 	.entry {
 		--serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, 'Times New Roman', serif;
-		margin: 0 auto;
-		width: min(44rem, 100%);
+		width: 100%;
 		text-align: left;
 		font-family: var(--serif);
 		background: var(--bg-soft);
@@ -177,13 +177,13 @@
 		color: var(--text);
 	}
 
+	/* Same width as .entry above so the outer edges line up as one grid. */
 	.cards {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(260px, 320px));
+		grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
 		justify-content: center;
 		gap: 1.25rem;
-		width: 100%;
-		max-width: 720px;
+		width: min(44rem, 100%);
 	}
 
 	.panel {
