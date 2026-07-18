@@ -33,8 +33,11 @@
 		"vite": "^8.1.4"
 	},
 	"lint-staged": {
-		"*.{ts,js,mjs,cjs,svelte}": [
+		"*.{ts,js,mjs,cjs}": [
 			"oxfmt --write",
+			"oxlint --deny-warnings --type-aware"
+		],
+		"*.svelte": [
 			"oxlint --deny-warnings --type-aware"
 		],
 		"*.{json,md,yml,yaml,css}": [

@@ -215,7 +215,8 @@ function handleJoin(ws: Socket, msg: Readonly<Record<string, unknown>>): void {
 
 	// `register` runs after room state is updated but before any messages are
 	// sent, so the registry entry exists when the 'joined' message goes out.
-	const result = room.join(msg.name, (id) => {
+	// avatar/nameColor pass through unvalidated — the engine sanitizes them.
+	const result = room.join(msg.name, msg.avatar, msg.nameColor, (id) => {
 		ws.data.code = room.code;
 		ws.data.playerId = id;
 		registry.set(`${room.code}:${id}`, ws);

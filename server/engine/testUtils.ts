@@ -112,8 +112,8 @@ export class Harness {
 		});
 	}
 
-	join(name: string): PlayerId {
-		const res = this.room.join(name, () => {});
+	join(name: string, avatar: string | null = null, nameColor: string | null = null): PlayerId {
+		const res = this.room.join(name, avatar, nameColor, () => {});
 		if (!res.ok) {
 			throw new Error(`join('${name}') failed: ${res.code}`);
 		}

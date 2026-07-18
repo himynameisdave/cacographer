@@ -5,6 +5,7 @@
 	import { GameSocket } from '$lib/realtime/client';
 	import { wsUrl } from '$lib/realtime/urls';
 	import { GameState } from '$lib/game.svelte';
+	import AvatarEditor from '$lib/components/AvatarEditor.svelte';
 	import Canvas from '$lib/components/Canvas.svelte';
 	import Chat from '$lib/components/Chat.svelte';
 	import ColorPicker from '$lib/components/ColorPicker.svelte';
@@ -15,15 +16,39 @@
 	import WordBlanks from '$lib/components/WordBlanks.svelte';
 
 	const NAME_KEY = 'cacographer:name';
+	const AVATAR_KEY = 'cacographer:avatar';
+	const NAME_COLOR_KEY = 'cacographer:nameColor';
 	const SIZES = [4, 8, 14, 24];
+
+	/** Chat-name palette — kept bright so every option reads on the dark chat background. */
+	const NAME_COLORS = [
+		{ hex: '#f87171', name: 'Red' },
+		{ hex: '#fb923c', name: 'Orange' },
+		{ hex: '#fbbf24', name: 'Amber' },
+		{ hex: '#a3e635', name: 'Lime' },
+		{ hex: '#4ade80', name: 'Green' },
+		{ hex: '#2dd4bf', name: 'Teal' },
+		{ hex: '#38bdf8', name: 'Sky' },
+		{ hex: '#818cf8', name: 'Indigo' },
+		{ hex: '#c084fc', name: 'Purple' },
+		{ hex: '#f472b6', name: 'Pink' }
+	];
 
 	const code = $derived((page.params.code ?? '').toUpperCase());
 
 	const gs = new GameState();
 	let socket: GameSocket | null = null;
-	let joinName = ''; // the name we (re)join with; not reactive on purpose
+	// The profile we (re)join with; not reactive on purpose.
+	let joinName = '';
+	let joinAvatar: string | null = null;
+	let joinNameColor: string | null = null;
+
+	// Read once so the editor's `initial` never changes under it while drawing.
+	const initialAvatar = localStorage.getItem(AVATAR_KEY);
 
 	let nameInput = $state(localStorage.getItem(NAME_KEY) ?? '');
+	let avatarData = $state(initialAvatar);
+	let nameColor = $state(localStorage.getItem(NAME_COLOR_KEY));
 	let submittedName = $state(false);
 	let copied = $state(false);
 
@@ -57,11 +82,23 @@
 			.toSorted((a, b) => b.gain - a.gain);
 	});
 
+	function persist(key: string, value: string | null): void {
+		if (value === null) {
+			localStorage.removeItem(key);
+		} else {
+			localStorage.setItem(key, value);
+		}
+	}
+
 	function joinRoom(): void {
 		const name = nameInput.trim().slice(0, LIMITS.name);
 		if (!name) {return;}
 		joinName = name;
+		joinAvatar = avatarData !== null && avatarData.length <= LIMITS.avatarLength ? avatarData : null;
+		joinNameColor = nameColor;
 		localStorage.setItem(NAME_KEY, name);
+		persist(AVATAR_KEY, joinAvatar);
+		persist(NAME_COLOR_KEY, joinNameColor);
 		submittedName = true;
 		gs.fatalError = null;
 
@@ -77,7 +114,15 @@
 				gs.status = s;
 				// Covers both first connect and every auto-reconnect: the first
 				// message on a fresh socket must be the join.
-				if (s === 'open') {ws.send({ type: 'join', code, name: joinName });}
+				if (s === 'open') {
+					ws.send({
+						type: 'join',
+						code,
+						name: joinName,
+						avatar: joinAvatar,
+						nameColor: joinNameColor
+					});
+				}
 			}
 		});
 		socket = ws;
@@ -177,6 +222,24 @@
 				<p class="error-text">That name is taken — try another.</p>
 			{/if}
 			<form class="gate-form" onsubmit={onGateSubmit}>
+				<div class="gate-section">
+					<p class="gate-label">Draw yourself <span class="gate-optional">(optional)</span></p>
+					<AvatarEditor initial={initialAvatar} onchange={(d) => (avatarData = d)} />
+				</div>
+				<div class="gate-section">
+					<p class="gate-label">Name color</p>
+					<ColorPicker
+						color={nameColor ?? ''}
+						active={nameColor !== null}
+						palette={NAME_COLORS}
+						onselect={(hex) => (nameColor = hex)}
+					/>
+					{#if nameColor !== null}
+						<p class="gate-preview" style="color: {nameColor}">
+							{nameInput.trim() || 'Your name'}
+						</p>
+					{/if}
+				</div>
 				<input
 					type="text"
 					placeholder="Your name"
@@ -427,7 +490,12 @@
 
 		<aside class="col right">
 			<div class="card chat-card">
-				<Chat entries={gs.chat} placeholder={chatPlaceholder} onsend={sendChat} />
+				<Chat
+					entries={gs.chat}
+					identities={gs.identities}
+					placeholder={chatPlaceholder}
+					onsend={sendChat}
+				/>
 			</div>
 		</aside>
 	</main>
@@ -475,8 +543,34 @@
 	.gate-form {
 		display: flex;
 		flex-direction: column;
-		gap: 0.75rem;
+		gap: 1rem;
 		width: 100%;
+	}
+
+	.gate-section {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.6rem;
+	}
+
+	.gate-label {
+		font-size: 0.75rem;
+		font-weight: 700;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--text-muted);
+	}
+
+	.gate-optional {
+		font-weight: 400;
+		text-transform: none;
+		letter-spacing: normal;
+	}
+
+	.gate-preview {
+		font-weight: 700;
+		font-size: 0.9rem;
 	}
 
 	.error-text.big {

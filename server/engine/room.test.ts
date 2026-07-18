@@ -11,6 +11,9 @@ import { Harness, WORDS, chooseWord, choicesFor, startedGame } from './testUtils
 
 const DRAW_MS = DEFAULT_SETTINGS.drawTimeSeconds * 1000; // 80_000
 
+/** A well-formed (if tiny) PNG data URL for profile tests. */
+const AVATAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUg==';
+
 // ---------------------------------------------------------------------------
 // Joining
 // ---------------------------------------------------------------------------
@@ -21,7 +24,7 @@ describe('join', () => {
 		// Collected rather than assigned to a `let`: TS's control-flow analysis can't see that a
 		// callback ran, so a `PlayerId | null` binding narrows to `null` at the assertion below.
 		const registered: PlayerId[] = [];
-		const res = h.room.join('Alice', (id) => {
+		const res = h.room.join('Alice', null, null, (id) => {
 			registered.push(id);
 		});
 		if (!res.ok) {
@@ -58,7 +61,7 @@ describe('join', () => {
 	test('duplicate connected name is rejected (case/whitespace-insensitive)', () => {
 		const h = new Harness();
 		h.join('Alice');
-		const res = h.room.join('  ALICE ', () => {});
+		const res = h.room.join('  ALICE ', null, null, () => {});
 		expect(res.ok).toBe(false);
 		if (!res.ok) {
 			expect(res.code).toBe('name_taken');
@@ -71,7 +74,7 @@ describe('join', () => {
 		const a = h.join('Alice');
 		h.join('Bob');
 		h.send(a, { type: 'updateSettings', settings: { maxPlayers: 2 } });
-		const res = h.room.join('Cara', () => {});
+		const res = h.room.join('Cara', null, null, () => {});
 		expect(res.ok).toBe(false);
 		if (!res.ok) {
 			expect(res.code).toBe('room_full');
@@ -80,17 +83,64 @@ describe('join', () => {
 
 	test('empty name rejected, long name capped', () => {
 		const h = new Harness();
-		const res = h.room.join('   ', () => {});
+		const res = h.room.join('   ', null, null, () => {});
 		expect(res.ok).toBe(false);
 		if (!res.ok) {
 			expect(res.code).toBe('bad_message');
 		}
 
-		const long = h.room.join('x'.repeat(60), () => {});
+		const long = h.room.join('x'.repeat(60), null, null, () => {});
 		expect(long.ok).toBe(true);
 		if (long.ok) {
 			expect(h.room.players.get(long.playerId)!.name).toHaveLength(LIMITS.name);
 		}
+	});
+
+	test('avatar and name color round-trip into snapshots and broadcasts', () => {
+		const h = new Harness();
+		const a = h.join('Alice');
+		h.clear();
+		const b = h.join('Bob', AVATAR, '#ff8800');
+
+		const toA = h.typeTo(a, 'playerJoined');
+		expect(toA[0]!.player.avatar).toBe(AVATAR);
+		expect(toA[0]!.player.nameColor).toBe('#ff8800');
+
+		const snapshot = h.typeTo(b, 'joined')[0]!.room;
+		expect(snapshot.players.find((p) => p.id === b)!.avatar).toBe(AVATAR);
+		expect(snapshot.players.find((p) => p.id === a)!.avatar).toBeNull();
+	});
+
+	test('malformed profile values degrade to null without failing the join', () => {
+		const h = new Harness();
+		const cases: [unknown, unknown][] = [
+			['data:image/svg+xml;base64,PHN2Zz4=', 'red'], // wrong mime, non-hex color
+			['data:image/png;base64,not b64!', '#12'], // invalid base64, bad hex length
+			[`data:image/png;base64,${'A'.repeat(LIMITS.avatarLength)}`, 42], // oversized, non-string
+			[7, {}]
+		];
+		for (const [i, [avatar, color]] of cases.entries()) {
+			const res = h.room.join(`P${i}`, avatar, color, () => {});
+			expect(res.ok).toBe(true);
+		}
+		for (const p of h.room.players.values()) {
+			expect(p.avatar).toBeNull();
+			expect(p.nameColor).toBeNull();
+		}
+	});
+
+	test('rejoin within grace refreshes the stored profile', () => {
+		const h = new Harness();
+		h.join('Alice');
+		const b = h.join('Bob', AVATAR, '#ff8800');
+		h.room.disconnect(b);
+		h.clear();
+
+		const res = h.room.join('Bob', null, '#00ff00', () => {});
+		expect(res.ok).toBe(true);
+		const player = h.room.players.get(b)!;
+		expect(player.avatar).toBeNull();
+		expect(player.nameColor).toBe('#00ff00');
 	});
 });
 
@@ -680,7 +730,7 @@ describe('disconnects', () => {
 		h.clock.advance(1000);
 		h.clear();
 
-		const res = h.room.join('Bob', () => {});
+		const res = h.room.join('Bob', null, null, () => {});
 		expect(res.ok).toBe(true);
 		if (!res.ok) {
 			return;
@@ -1317,7 +1367,7 @@ describe('votes & gallery', () => {
 
 		h.room.disconnect(b);
 		h.clear();
-		const res = h.room.join('Bob', () => {});
+		const res = h.room.join('Bob', null, null, () => {});
 		expect(res.ok).toBe(true);
 		const joined = h.typeTo(b, 'joined');
 		expect(joined).toHaveLength(1);

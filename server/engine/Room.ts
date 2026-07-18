@@ -41,6 +41,22 @@ export const SYNC_MS = 5000;
 const WORD_SOURCES: ReadonlySet<Settings['wordSource']> = new Set(['builtin', 'custom', 'both']);
 
 /**
+ * Profile fields arrive as untrusted wire JSON (see WORD_SOURCES): the avatar must be a
+ * bounded PNG data URL — anything else could not be safely rebroadcast into an <img src> —
+ * and colors must be plain hex. Invalid values degrade to null rather than failing the join.
+ */
+const AVATAR_RE = /^data:image\/png;base64,[a-z0-9+/]+={0,2}$/iu;
+const COLOR_RE = /^#[0-9a-f]{3,8}$/iu;
+
+function sanitizeAvatar(v: unknown): string | null {
+	return typeof v === 'string' && v.length <= LIMITS.avatarLength && AVATAR_RE.test(v) ? v : null;
+}
+
+function sanitizeColor(v: unknown): string | null {
+	return typeof v === 'string' && COLOR_RE.test(v) ? v : null;
+}
+
+/**
  * Opaque timer handle from `deps.schedule` — `unknown` because Node/Bun's `setTimeout`
  * return different shapes and the engine must stay transport-agnostic. `deps.cancel`'s own
  * implementation is the one place that knows the real shape and narrows it back; that's a
@@ -81,6 +97,8 @@ export function defaultDeps(send: RoomDeps['send']): RoomDeps {
 type ServerPlayer = {
 	id: PlayerId;
 	name: string;
+	avatar: string | null;
+	nameColor: string | null;
 	score: number;
 	connected: boolean;
 	guessedThisTurn: boolean;
@@ -162,20 +180,31 @@ export class Room {
 	/**
 	 * `register` is called with the assigned player id after state is updated
 	 * but before any messages are sent, so the transport can map the socket.
+	 * `rawAvatar`/`rawNameColor` are unvalidated wire values; bad ones become null.
 	 */
-	join(rawName: string, register: (id: PlayerId) => void): JoinResult {
+	join(
+		rawName: string,
+		rawAvatar: unknown,
+		rawNameColor: unknown,
+		register: (id: PlayerId) => void
+	): JoinResult {
 		const name = rawName.trim().slice(0, LIMITS.name);
 		if (!name) {
 			return { ok: false, code: 'bad_message', message: 'Name required' };
 		}
+		const avatar = sanitizeAvatar(rawAvatar);
+		const nameColor = sanitizeColor(rawNameColor);
 
 		// Same-name rejoin while the slot is in its grace period reattaches the
-		// old player (score retained).
+		// old player (score retained). The profile refreshes from the new join —
+		// the player may have redrawn their avatar while away.
 		const existing = [...this.players.values()].find(
 			(p: Readonly<ServerPlayer>) => !p.connected && normalize(p.name) === normalize(name)
 		);
 		if (existing) {
 			existing.connected = true;
+			existing.avatar = avatar;
+			existing.nameColor = nameColor;
 			if (existing.graceTimer !== null) {
 				this.deps.cancel(existing.graceTimer);
 			}
@@ -209,6 +238,8 @@ export class Room {
 		const player: ServerPlayer = {
 			id,
 			name,
+			avatar,
+			nameColor,
 			score: 0,
 			connected: true,
 			guessedThisTurn: false,
@@ -765,8 +796,7 @@ export class Room {
 		if (!op || typeof op !== 'object' || typeof op.id !== 'string' || op.id.length > 32) {
 			return null;
 		}
-		const color =
-			typeof op.color === 'string' && /^#[0-9a-f]{3,8}$/iu.test(op.color) ? op.color : null;
+		const color = sanitizeColor(op.color);
 		if (color === null) {
 			return null;
 		}
@@ -1079,7 +1109,9 @@ export class Room {
 			score: p.score,
 			isHost: p.id === this.hostId,
 			connected: p.connected,
-			guessedThisTurn: p.guessedThisTurn
+			guessedThisTurn: p.guessedThisTurn,
+			avatar: p.avatar,
+			nameColor: p.nameColor
 		};
 	}
 

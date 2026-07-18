@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { playerColor } from '$lib/identity';
 	import  { type ClientPlayer, type PlayerId } from '$lib/protocol';
 
 	type Props = {
@@ -16,6 +17,13 @@
 	{#each sorted as p, i (p.id)}
 		<li class="player" class:disconnected={!p.connected} class:guessed={p.guessedThisTurn}>
 			<span class="rank">#{i + 1}</span>
+			{#if p.avatar !== null}
+				<img class="avatar" src={p.avatar} alt="" />
+			{:else}
+				<span class="avatar placeholder" style="background: {playerColor(p.id, p.nameColor)}">
+					{p.name.slice(0, 1).toUpperCase()}
+				</span>
+			{/if}
 			<span class="who">
 				<span class="name">
 					{p.name}{#if p.id === you}<span class="you-tag"> (you)</span>{/if}{#if !p.connected}…{/if}
@@ -65,6 +73,25 @@
 		font-weight: 700;
 		color: var(--text-faint);
 		min-width: 1.6rem;
+	}
+
+	.avatar {
+		width: 32px;
+		height: 32px;
+		border-radius: 6px;
+		background: #ffffff;
+		border: 1px solid var(--border-soft);
+		flex-shrink: 0;
+	}
+
+	/* Background is the player's name color, set inline — same fallback as chat. */
+	.avatar.placeholder {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		color: rgb(20 20 28 / 0.85);
+		font-weight: 800;
+		font-size: 0.8rem;
 	}
 
 	.who {
