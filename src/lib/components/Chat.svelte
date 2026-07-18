@@ -119,12 +119,12 @@
 	}
 
 	.msg .avatar {
-		width: 18px;
-		height: 18px;
+		width: 22px;
+		height: 22px;
 		border-radius: 4px;
 		background: #ffffff;
 		border: 1px solid var(--border-soft);
-		vertical-align: -4px;
+		vertical-align: -6px;
 		margin-right: 0.35rem;
 	}
 
