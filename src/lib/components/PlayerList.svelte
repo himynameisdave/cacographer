@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { playerColor } from '$lib/identity';
 	import  { type ClientPlayer, type PlayerId } from '$lib/protocol';
 
 	type Props = {
@@ -19,7 +20,9 @@
 			{#if p.avatar !== null}
 				<img class="avatar" src={p.avatar} alt="" />
 			{:else}
-				<span class="avatar placeholder">{p.name.slice(0, 1).toUpperCase()}</span>
+				<span class="avatar placeholder" style="background: {playerColor(p.id, p.nameColor)}">
+					{p.name.slice(0, 1).toUpperCase()}
+				</span>
 			{/if}
 			<span class="who">
 				<span class="name">
@@ -81,13 +84,13 @@
 		flex-shrink: 0;
 	}
 
+	/* Background is the player's name color, set inline — same fallback as chat. */
 	.avatar.placeholder {
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		background: var(--bg-inset);
-		color: var(--text-faint);
-		font-weight: 700;
+		color: rgb(20 20 28 / 0.85);
+		font-weight: 800;
 		font-size: 0.8rem;
 	}
 

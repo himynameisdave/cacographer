@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { type PlayerIdentity } from '$lib/game.svelte';
+	import { playerColor } from '$lib/identity';
 	import { LIMITS, type ChatEntry, type PlayerId } from '$lib/protocol';
 
 	type Props = {
@@ -46,16 +47,7 @@
 		if (!id) {
 			return 'var(--text-muted)';
 		}
-		const picked = identities[id]?.color ?? null;
-		if (picked !== null) {
-			return picked;
-		}
-		// No picked color — derive a stable one from the player id.
-		let h = 0;
-		for (let i = 0; i < id.length; i++) {
-			h = (h * 31 + (id.codePointAt(i) ?? 0)) % 4_294_967_296;
-		}
-		return `hsl(${h % 360}, 65%, 72%)`;
+		return playerColor(id, identities[id]?.color ?? null);
 	}
 
 	function avatarFor(id: string | null): string | null {
@@ -75,7 +67,9 @@
 					{#if avatar !== null}
 						<img class="avatar" src={avatar} alt="" />
 					{:else}
-						<span class="avatar placeholder">{entry.name.slice(0, 1).toUpperCase()}</span>
+						<span class="avatar placeholder" style="background: {nameColor(entry.id)}">
+							{entry.name.slice(0, 1).toUpperCase()}
+						</span>
 					{/if}
 					<span class="name" style="color: {nameColor(entry.id)}">{entry.name}</span>
 					<span class="text">{entry.text}</span>
@@ -116,6 +110,9 @@
 	}
 
 	.msg {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
 		padding: 0.25rem 0.45rem;
 		border-radius: 6px;
 		font-size: 0.88rem;
@@ -128,23 +125,25 @@
 		border-radius: 4px;
 		background: #ffffff;
 		border: 1px solid var(--border-soft);
-		vertical-align: -6px;
-		margin-right: 0.35rem;
+		flex-shrink: 0;
 	}
 
+	/* Background is the sender's name color, set inline. */
 	.msg .avatar.placeholder {
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		background: var(--bg-inset);
-		color: var(--text-faint);
-		font-weight: 700;
+		color: rgb(20 20 28 / 0.85);
+		font-weight: 800;
 		font-size: 0.7rem;
 	}
 
 	.msg .name {
 		font-weight: 700;
-		margin-right: 0.4rem;
+	}
+
+	.msg .text {
+		min-width: 0;
 	}
 
 	.msg .name::after {
@@ -164,7 +163,6 @@
 
 	.msg.guessed .tag {
 		font-size: 0.7rem;
-		margin-right: 0.3rem;
 	}
 
 	.composer {
