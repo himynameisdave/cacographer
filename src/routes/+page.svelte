@@ -2,6 +2,21 @@
 	import { goto } from '$app/navigation';
 	import { serverBase } from '$lib/realtime/urls';
 
+	/** Minecraft-style splash lines — one is picked at random per page load. */
+	const SPLASHES = [
+		'Each round, one artist. The rest of you? Cacographers.',
+		'One of you draws. The rest guess like the cacographers you are.',
+		'See also: your coworkers, guessing wildly at your terrible drawing.',
+		'Take turns drawing badly. Guess accordingly.',
+		'Warning: contains coworkers who cannot draw.',
+		'The word was obvious. Your drawing was not.',
+		"Is it a horse? A dog? It was 'submarine'.",
+		"Art school dropout? You'll fit right in.",
+		'Pictionary for people with keyboards and grudges.',
+		'Nobody knows what that squiggle is. Not even you.'
+	];
+	const splash = SPLASHES[Math.floor(Math.random() * SPLASHES.length)];
+
 	let codeInput = $state('');
 	let creating = $state(false);
 	let joining = $state(false);
@@ -103,7 +118,7 @@
 		</section>
 	</div>
 
-	<footer class="foot">One player at a time is the artist, the rest are simple cacographers.</footer>
+	<footer class="foot">{splash}</footer>
 </main>
 
 <style>
@@ -216,7 +231,27 @@
 	}
 
 	.foot {
-		color: var(--text-faint);
-		font-size: 0.85rem;
+		color: var(--text-muted);
+		font-size: 1.1rem;
+		text-align: center;
+		animation: splash-pulse 1.8s ease-in-out infinite;
+	}
+
+	@keyframes splash-pulse {
+		0%,
+		100% {
+			transform: scale(1);
+			opacity: 0.75;
+		}
+		50% {
+			transform: scale(1.045);
+			opacity: 1;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.foot {
+			animation: none;
+		}
 	}
 </style>
