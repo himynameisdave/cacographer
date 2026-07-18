@@ -61,7 +61,11 @@
 <main class="home">
 	<header class="hero">
 		<h1>Cacographer</h1>
-		<p class="tagline">draw badly · guess fast</p>
+		<p class="tagline">
+			<span class="pron">/kəˈkɒɡ.rə.fər/</span>
+			<span class="pos">noun</span>
+			<span class="def">someone who is bad at spelling or handwriting</span>
+		</p>
 	</header>
 
 	<div class="cards">
@@ -97,7 +101,7 @@
 		</section>
 	</div>
 
-	<footer class="foot">One player scribbles, everyone else races to guess the word.</footer>
+	<footer class="foot">One player at a time is the artist, the rest are simple cacographers.</footer>
 </main>
 
 <style>
@@ -125,11 +129,31 @@
 		color: transparent;
 	}
 
+	/* Dictionary-entry tagline: pronunciation, part of speech, then the definition. */
 	.tagline {
 		margin-top: 0.4rem;
 		color: var(--text-muted);
-		font-size: 1.1rem;
-		letter-spacing: 0.06em;
+		font-size: 1rem;
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		align-items: baseline;
+		column-gap: 0.5rem;
+	}
+
+	.pron {
+		font-family: var(--mono);
+		font-size: 0.9rem;
+		color: var(--text-faint);
+	}
+
+	.pos {
+		font-style: italic;
+		color: var(--text-faint);
+	}
+
+	.def {
+		font-style: italic;
 	}
 
 	.cards {
