@@ -6,7 +6,15 @@ import {
 	type Settings,
 	type VoteKind
 } from '../../src/lib/protocol';
-import { CHOOSE_MS, GRACE_MS, REDO_LIMIT, REVEAL_MS, SKIP_REVEAL_MS, SYNC_MS } from './Room';
+import {
+	CHOOSE_MS,
+	GRACE_MS,
+	REDO_LIMIT,
+	REVEAL_MS,
+	SKIP_REVEAL_MS,
+	SYNC_MS,
+	YOURE_GONNA_HAVE_TO_BE_FASTER_THAN_THAT_MS
+} from './Room';
 import { Harness, WORDS, chooseWord, choicesFor, startedGame } from './testUtils';
 
 const DRAW_MS = DEFAULT_SETTINGS.drawTimeSeconds * 1000; // 80_000
@@ -483,6 +491,47 @@ describe('guessing', () => {
 		const { h, b, word } = drawingTrio();
 		h.send(b, { type: 'guess', text: `  ${word.toUpperCase()}  ` });
 		expect(h.typeTo(b, 'guessResult')).toEqual([{ type: 'guessResult', correct: true }]);
+	});
+
+	test('correct guess within YOURE_GONNA_HAVE_TO_BE_FASTER_THAN_THAT_MS of the previous one is flagged youreGonnaHaveToBeFasterThanThat', () => {
+		const { h, b, c, word } = drawingTrio();
+		h.send(b, { type: 'guess', text: word });
+		h.clock.advance(YOURE_GONNA_HAVE_TO_BE_FASTER_THAN_THAT_MS);
+		h.send(c, { type: 'guess', text: word });
+
+		expect(h.typeTo(b, 'guessResult')).toEqual([{ type: 'guessResult', correct: true }]);
+		expect(h.typeTo(c, 'guessResult')).toEqual([
+			{ type: 'guessResult', correct: true, youreGonnaHaveToBeFasterThanThat: true }
+		]);
+	});
+
+	test('correct guess later than YOURE_GONNA_HAVE_TO_BE_FASTER_THAN_THAT_MS is not flagged', () => {
+		const { h, b, c, word } = drawingTrio();
+		h.send(b, { type: 'guess', text: word });
+		h.clock.advance(YOURE_GONNA_HAVE_TO_BE_FASTER_THAN_THAT_MS + 1);
+		h.send(c, { type: 'guess', text: word });
+		expect(h.typeTo(c, 'guessResult')).toEqual([{ type: 'guessResult', correct: true }]);
+	});
+
+	test('youreGonnaHaveToBeFasterThanThat window measures from the latest correct guess, not the first', () => {
+		const { h, ids } = startedGame(['Alice', 'Bob', 'Cara', 'Dan']);
+		const a = ids[0]!;
+		const b = ids[1]!;
+		const c = ids[2]!;
+		const d = ids[3]!;
+		const word = chooseWord(h, a);
+		h.clear();
+
+		h.send(b, { type: 'guess', text: word });
+		h.clock.advance(YOURE_GONNA_HAVE_TO_BE_FASTER_THAN_THAT_MS + 500);
+		h.send(c, { type: 'guess', text: word }); // outside b's window → not flagged
+		h.clock.advance(YOURE_GONNA_HAVE_TO_BE_FASTER_THAN_THAT_MS - 200);
+		h.send(d, { type: 'guess', text: word }); // inside c's window → flagged
+
+		expect(h.typeTo(c, 'guessResult')).toEqual([{ type: 'guessResult', correct: true }]);
+		expect(h.typeTo(d, 'guessResult')).toEqual([
+			{ type: 'guessResult', correct: true, youreGonnaHaveToBeFasterThanThat: true }
+		]);
 	});
 });
 
