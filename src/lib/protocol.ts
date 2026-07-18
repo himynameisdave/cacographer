@@ -157,7 +157,14 @@ export type ServerMessage =
 	| { readonly type: 'clearCanvas' }
 	| { readonly type: 'canvasState'; readonly ops: readonly DrawOp[] } // full resync (undo, reconnect)
 	| { readonly type: 'letterRevealed'; readonly masked: string }
-	| { readonly type: 'guessResult'; readonly correct: boolean; readonly close?: boolean } // to the guesser only
+	| {
+			readonly type: 'guessResult';
+			readonly correct: boolean;
+			readonly close?: boolean;
+			/** Correct, but within YOURE_GONNA_HAVE_TO_BE_FASTER_THAN_THAT_MS of an earlier
+			 * correct guess — earns the "YOU'RE GONNA HAVE TO BE FASTER THAN THAT" jeer. */
+			readonly youreGonnaHaveToBeFasterThanThat?: boolean;
+	  } // to the guesser only
 	| { readonly type: 'playerGuessed'; readonly id: PlayerId }
 	| { readonly type: 'chat'; readonly entry: ChatEntry }
 	| { readonly type: 'timeSync'; readonly endsAt: number }
