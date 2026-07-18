@@ -16,6 +16,11 @@
 	{#each sorted as p, i (p.id)}
 		<li class="player" class:disconnected={!p.connected} class:guessed={p.guessedThisTurn}>
 			<span class="rank">#{i + 1}</span>
+			{#if p.avatar !== null}
+				<img class="avatar" src={p.avatar} alt="" />
+			{:else}
+				<span class="avatar placeholder">{p.name.slice(0, 1).toUpperCase()}</span>
+			{/if}
 			<span class="who">
 				<span class="name">
 					{p.name}{#if p.id === you}<span class="you-tag"> (you)</span>{/if}{#if !p.connected}…{/if}
@@ -65,6 +70,25 @@
 		font-weight: 700;
 		color: var(--text-faint);
 		min-width: 1.6rem;
+	}
+
+	.avatar {
+		width: 28px;
+		height: 28px;
+		border-radius: 6px;
+		background: #ffffff;
+		border: 1px solid var(--border-soft);
+		flex-shrink: 0;
+	}
+
+	.avatar.placeholder {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		background: var(--bg-inset);
+		color: var(--text-faint);
+		font-weight: 700;
+		font-size: 0.8rem;
 	}
 
 	.who {
