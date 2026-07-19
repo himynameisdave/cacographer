@@ -7,12 +7,34 @@ export const TEARDOWN_MS = 60_000;
 const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 const CODE_LENGTH = 5;
 
+/**
+ * Time and randomness for the manager itself, injected for the same reason `Room` injects its
+ * own (CLAUDE.md): teardown scheduling and room-code generation stay deterministic under test.
+ * `schedule` is fire-and-forget — teardown re-checks `connectedCount` when it fires, so there's
+ * nothing to cancel — hence no handle and no `cancel`.
+ */
+export type ManagerDeps = {
+	readonly schedule: (fn: () => void, ms: number) => void;
+	readonly random: () => number;
+	readonly makeRoomDeps: (send: RoomDeps['send']) => RoomDeps;
+};
+
+export function defaultManagerDeps(): ManagerDeps {
+	return {
+		schedule: (fn, ms) => {
+			setTimeout(fn, ms);
+		},
+		random: Math.random,
+		makeRoomDeps: defaultDeps
+	};
+}
+
 export class RoomManager {
 	rooms = new Map<string, Room>();
 
 	constructor(
 		private readonly send: (roomCode: string, playerId: PlayerId, msg: ServerMessage) => void,
-		private readonly makeDeps: (send: RoomDeps['send']) => RoomDeps = defaultDeps
+		private readonly deps: ManagerDeps = defaultManagerDeps()
 	) {}
 
 	create(): Room {
@@ -22,7 +44,7 @@ export class RoomManager {
 		}
 		const room = new Room(
 			code,
-			this.makeDeps((playerId, msg) => {
+			this.deps.makeRoomDeps((playerId, msg) => {
 				this.send(code, playerId, msg);
 			}),
 			() => {
@@ -40,7 +62,7 @@ export class RoomManager {
 	}
 
 	private scheduleTeardown(code: string): void {
-		setTimeout(() => {
+		this.deps.schedule(() => {
 			const room = this.rooms.get(code);
 			if (room && room.connectedCount === 0) {
 				room.dispose();
@@ -52,7 +74,7 @@ export class RoomManager {
 	private generateCode(): string {
 		let code = '';
 		for (let i = 0; i < CODE_LENGTH; i++) {
-			code += ALPHABET[Math.floor(Math.random() * ALPHABET.length)];
+			code += ALPHABET[Math.floor(this.deps.random() * ALPHABET.length)];
 		}
 		return code;
 	}
