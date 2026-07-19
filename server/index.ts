@@ -153,6 +153,12 @@ function fetchHandler(req: Request, server: Server<SocketData>): Response | unde
 			return new Response(null, { status: 204, headers: CORS_HEADERS });
 		}
 
+		// Cheap liveness probe for the platform health check (e.g. Railway). Serves before
+		// room state so an idle deploy still reports healthy.
+		if (req.method === 'GET' && pathname === '/api/health') {
+			return json({ ok: true });
+		}
+
 		if (req.method === 'POST' && pathname === '/api/rooms') {
 			const room = manager.create();
 			return json({ code: room.code });
