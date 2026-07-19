@@ -554,7 +554,7 @@ describe('repeat limit', () => {
 		expect(h.typeTo(a, 'error')).toHaveLength(0);
 
 		h.send(a, { type: 'chat', text: 'nice' });
-		expect(h.chatsTo(b)).toHaveLength(REPEAT_LIMIT); // the 16th never lands
+		expect(h.chatsTo(b)).toHaveLength(REPEAT_LIMIT); // one past the limit never lands
 		const errs = h.typeTo(a, 'error');
 		expect(errs).toHaveLength(1);
 		expect(errs[0]!.code).toBe('rate_limited');

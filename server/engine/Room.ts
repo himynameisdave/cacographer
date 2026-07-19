@@ -37,7 +37,7 @@ export const GRACE_MS = 60_000; // disconnected player keeps slot/score this lon
 // Correct guess this close behind another one earns the jeer.
 export const YOURE_GONNA_HAVE_TO_BE_FASTER_THAN_THAT_MS = 1000;
 export const SYNC_MS = 5000;
-export const REPEAT_LIMIT = 15; // sends of the same message before further repeats are blocked
+export const REPEAT_LIMIT = 20; // sends of the same message before further repeats are blocked
 const REPEAT_TRACKED_MAX = 500; // distinct messages tracked per player, to bound memory
 
 /**
