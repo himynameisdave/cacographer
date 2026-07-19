@@ -620,7 +620,7 @@ describe('potty-mouth filter', () => {
 		const a = h.join('Alice');
 		const b = h.join('Bob');
 		h.clear();
-		h.send(b, { type: 'chat', text: 'this is bullshit' });
+		h.send(b, { type: 'chat', text: 'this is fucking rigged' });
 		for (const id of [a, b]) {
 			const chats = h.chatsTo(id);
 			expect(chats).toHaveLength(1);
@@ -629,7 +629,7 @@ describe('potty-mouth filter', () => {
 			expect(chats[0]!.scope).toBe('all');
 			expect(chats[0]!.filtered).toBe(true);
 			expect(POTTY_PHRASES).toContain(chats[0]!.text);
-			expect(chats[0]!.text).not.toContain('bullshit');
+			expect(chats[0]!.text).not.toContain('fucking');
 		}
 	});
 
@@ -639,7 +639,7 @@ describe('potty-mouth filter', () => {
 		const b = h.join('Bob');
 		h.clear();
 		h.randQueue.push(0.05, 0.95);
-		h.send(b, { type: 'chat', text: 'well shit' });
+		h.send(b, { type: 'chat', text: 'well fuck' });
 		h.send(b, { type: 'chat', text: 'oh fuck' });
 		const chats = h.chatsTo(b);
 		expect(chats).toHaveLength(2);
@@ -681,13 +681,13 @@ describe('potty-mouth filter', () => {
 		const b = h.join('Bob');
 		h.send(a, {
 			type: 'updateSettings',
-			settings: { wordSource: 'custom', customWords: ['shit'], hintCount: 0 }
+			settings: { wordSource: 'custom', customWords: ['fuck'], hintCount: 0 }
 		});
 		h.send(a, { type: 'startGame' });
-		chooseWord(h, a); // only choice: 'shit'
+		chooseWord(h, a); // only choice: 'fuck'
 		h.clear();
 
-		h.send(b, { type: 'guess', text: 'shit' });
+		h.send(b, { type: 'guess', text: 'fuck' });
 		expect(h.typeTo(b, 'guessResult')).toEqual([{ type: 'guessResult', correct: true }]);
 		const system = h.chatsTo(a).filter((e) => e.scope === 'system');
 		expect(system.some((e) => e.text === 'Bob guessed the word!')).toBe(true);
@@ -700,16 +700,16 @@ describe('potty-mouth filter', () => {
 		const b = h.join('Bob');
 		h.send(a, {
 			type: 'updateSettings',
-			settings: { wordSource: 'custom', customWords: ['shit show'], hintCount: 0 }
+			settings: { wordSource: 'custom', customWords: ['cluster fuck'], hintCount: 0 }
 		});
 		h.send(a, { type: 'startGame' });
-		chooseWord(h, a); // only choice: 'shit show'
+		chooseWord(h, a); // only choice: 'cluster fuck'
 		h.clear();
 
-		h.send(b, { type: 'guess', text: 'shit' });
+		h.send(b, { type: 'guess', text: 'fuck' });
 		let chats = h.chatsTo(a);
 		expect(chats).toHaveLength(1);
-		expect(chats[0]!.text).toBe('shit');
+		expect(chats[0]!.text).toBe('fuck');
 		expect(chats[0]!.scope).toBe('all');
 		expect(chats[0]!.filtered).toBeUndefined();
 
@@ -727,18 +727,18 @@ describe('potty-mouth filter', () => {
 		const b = h.join('Bob');
 		h.send(a, {
 			type: 'updateSettings',
-			settings: { wordSource: 'custom', customWords: ['shit'], hintCount: 0 }
+			settings: { wordSource: 'custom', customWords: ['fuck'], hintCount: 0 }
 		});
 		h.send(a, { type: 'startGame' });
 		chooseWord(h, a);
-		h.send(b, { type: 'guess', text: 'shit' }); // correct → everyone guessed → reveal
+		h.send(b, { type: 'guess', text: 'fuck' }); // correct → everyone guessed → reveal
 		expect(h.room.phase).toBe('reveal');
 		h.clear();
 
-		h.send(b, { type: 'chat', text: 'shit happens' });
-		expect(h.chatsTo(a)).toEqual([{ id: b, name: 'Bob', text: 'shit happens', scope: 'all' }]);
+		h.send(b, { type: 'chat', text: 'fuck yeah' });
+		expect(h.chatsTo(a)).toEqual([{ id: b, name: 'Bob', text: 'fuck yeah', scope: 'all' }]);
 
-		h.send(b, { type: 'chat', text: 'fuck yes' });
+		h.send(b, { type: 'chat', text: 'fucking hell' });
 		expect(h.chatsTo(a).at(-1)!.filtered).toBe(true);
 	});
 

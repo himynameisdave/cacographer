@@ -8,22 +8,16 @@ import { normalize } from './text';
 
 /**
  * Token-exact blocklist, common variants listed explicitly. Substring or fuzzy
- * matching would flag honest guesses — "peacock", "class", "grape" — and a
- * trusted room needs a nudge, not armor.
+ * matching would flag honest guesses — "peacock", "scunthorpe", "dickens" —
+ * and a trusted room needs a nudge, not armor.
+ *
+ * Scope: slurs and hard NSFW words only. Mild everyday swearing ("shit",
+ * "ass", "piss" tier) is allowed on purpose — the potty-mouth gag is for the
+ * strong stuff, not a chastity filter for a room of friends.
  */
 const PROFANITY: ReadonlySet<string> = new Set([
-	'arse',
-	'arsehole',
-	'ass',
-	'asses',
-	'asshole',
-	'assholes',
-	'bastard',
-	'bastards',
 	'bitch',
 	'bitches',
-	'bollocks',
-	'bullshit',
 	'cock',
 	'cocks',
 	'cocksucker',
@@ -34,11 +28,6 @@ const PROFANITY: ReadonlySet<string> = new Set([
 	'dickhead',
 	'dickheads',
 	'dicks',
-	'dipshit',
-	'douchebag',
-	'douchebags',
-	'dumbass',
-	'dumbasses',
 	'fag',
 	'faggot',
 	'faggots',
@@ -49,11 +38,6 @@ const PROFANITY: ReadonlySet<string> = new Set([
 	'fuckers',
 	'fucking',
 	'fucks',
-	'goddamn',
-	'goddammit',
-	'horseshit',
-	'jackass',
-	'jackasses',
 	'motherfucker',
 	'motherfuckers',
 	'motherfucking',
@@ -61,22 +45,11 @@ const PROFANITY: ReadonlySet<string> = new Set([
 	'niggas',
 	'nigger',
 	'niggers',
-	'piss',
-	'pissed',
-	'pisses',
-	'prick',
-	'pricks',
 	'pussies',
 	'pussy',
 	'retard',
 	'retarded',
 	'retards',
-	'shit',
-	'shite',
-	'shithead',
-	'shitheads',
-	'shits',
-	'shitty',
 	'slut',
 	'sluts',
 	'twat',
