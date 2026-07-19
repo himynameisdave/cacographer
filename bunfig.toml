@@ -1,0 +1,4 @@
+[test]
+# Compile Svelte 5 rune modules (*.svelte.ts) on import so `bun test` can exercise
+# client logic like GameState. See test/svelte-preload.ts. Inert for server tests.
+preload = ["./test/svelte-preload.ts"]

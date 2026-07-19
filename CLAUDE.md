@@ -6,7 +6,9 @@ A Skribbl-clone drawing/guessing game. Product scope: `docs/PRD.md`. Architectur
 
 ```sh
 bun run dev           # game server (:3001) + Vite (:5173) together
-bun test server       # engine unit tests
+bun test              # all unit tests (engine + client)
+bun run test:server   # engine tests only (server/**)
+bun run test:client   # client tests only (src/**)
 bun run lint          # oxlint, strict — must be clean
 bun run format        # oxfmt --write (tabs, single quotes, 100 cols)
 bun run format:check  # what CI runs
@@ -45,8 +47,10 @@ CI (`.github/workflows/ci.yml`) runs lint → format:check → check → check:s
 
 ## Testing
 
+- The runner is `bun:test` everywhere — engine and client both. There is no second test framework.
 - Engine changes require `bun:test` coverage in `server/engine/*.test.ts`. Pure functions (scoring, masking, words, text) get direct unit tests; `Room` behavior is tested by driving a room with fake deps and asserting on the emitted messages — never by reaching into private state.
-- Anything timing-dependent must go through `deps.now`/`deps.schedule` so tests can advance a fake clock deterministically. Adding a raw `setTimeout`/`Date.now()` inside the engine is a bug.
+- Anything timing-dependent must go through `deps.now`/`deps.schedule` so tests can advance a fake clock deterministically. Adding a raw `setTimeout`/`Date.now()` inside the engine is a bug. This applies to `RoomManager` too, not just `Room` — both take injected time/randomness.
+- Client tests live in `src/**/*.test.ts` and also run under `bun:test`. Svelte 5 rune modules (`*.svelte.ts`) are compiler macros, so `bun test` can't import them raw; `test/svelte-preload.ts` (wired via `bunfig.toml`) strips the types and runs Svelte's `compileModule` on import. Logic classes like `GameState` are tested by instantiating them and feeding `ServerMessage`s — no DOM, no component mounting.
 
 ## Workflow
 

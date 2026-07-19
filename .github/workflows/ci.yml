@@ -31,8 +31,8 @@ jobs:
       - name: Typecheck server (tsc)
         run: bun run check:server
 
-      - name: Engine tests
-        run: bun test server
+      - name: Tests (engine + client)
+        run: bun test
 
       - name: Build
         run: bun run build
