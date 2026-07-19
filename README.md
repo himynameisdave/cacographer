@@ -1,14 +1,36 @@
-# cacographer
+<div align="center" margin="0 auto 20px">
+  <h1>
+    cacographer <span style="font-style: italic; font-size: 0.5em;">/kəˈkɒɡ.rə.fər/</span> <span style="font-style: bold; font-size: 0.5em;">(noun)</span>
+  </h1>
+  <p style="font-style: italic;">
+    1. someone who is bad at spelling or handwriting.
+  </p>
+  <p style="font-style: italic;">
+    2. someone who can draw funny pictures.
+  </p>
+  <div>
+    <a href="https://github.com/himynameisdave/cacographer/actions/workflows/ci.yml">
+      <img src="https://github.com/himynameisdave/cacographer/actions/workflows/ci.yml/badge.svg" alt="CI" />
+    </a>
+    <a href="https://app.fossa.com/projects/git%2Bgithub.com%2Fhimynameisdave%2Fcacographer?ref=badge_shield&issueType=license" alt="FOSSA Status"><img src="https://app.fossa.com/api/projects/git%2Bgithub.com%2Fhimynameisdave%2Fcacographer.svg?type=shield&issueType=license"/></a>
+    <a href="https://app.fossa.com/projects/git%2Bgithub.com%2Fhimynameisdave%2Fcacographer?ref=badge_shield&issueType=security" alt="FOSSA Status"><img src="https://app.fossa.com/api/projects/git%2Bgithub.com%2Fhimynameisdave%2Fcacographer.svg?type=shield&issueType=security"/></a>
+  </div>
+</div>
 
-[![CI](https://github.com/himynameisdave/cacographer/actions/workflows/ci.yml/badge.svg)](https://github.com/himynameisdave/cacographer/actions/workflows/ci.yml)
-
+<!--
 **cacographer** `/kəˈkɒɡ.rə.fər/` _noun_ — **1.** _someone who is bad at spelling or handwriting._ **2.** _someone who can draw funny pictures._
+-->
 
-If Core built skribbl.
+If Core built [skribbl](https://skribbl.io/).
 
 A real-time multiplayer drawing-and-guessing game for a trusted group of coworkers. One player at a time is the artist, the rest are simple cacographers — racing to guess the word in chat. No accounts, no database — share a link, play, done.
 
-**Stack:** Bun · SvelteKit 5 (runes) · Bun-native WebSockets · in-memory game state. See [docs/PRD.md](docs/PRD.md) for product scope and [docs/TRD.md](docs/TRD.md) for the technical design.
+**Stack**: This app uses a trimmed down version of [DaveStack](https://github.com/himynameisdave/davestack), which is a template for building SvelteKit apps with Bun. No datbase here, we're just using in-memory game state with [Bun-native WebSockets](https://bun.com/docs/runtime/http/websockets).
+
+To read more on the product and technical scope of this project, please read:
+
+- 📖 [docs/PRD.md](docs/PRD.md)
+- 🏗️ [docs/TRD.md](docs/TRD.md)
 
 ## Getting started
 
