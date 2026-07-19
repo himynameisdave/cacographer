@@ -1,0 +1,13 @@
+# Keep local build artifacts and caches out of the build context so the image
+# builds clean and fast. src/ and static/ are intentionally NOT ignored — the
+# `vite build` step in the Dockerfile needs them.
+node_modules
+build
+.svelte-kit
+.git
+.claude
+
+# .env carries PUBLIC_GAME_SERVER="" (same-origin) and MUST stay in the context —
+# it is inlined into the client at build time. Exclude only the dev value, which
+# points at localhost:3001 and must never reach a prod build.
+.env.development
