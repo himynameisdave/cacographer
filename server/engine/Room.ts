@@ -9,6 +9,7 @@ import {
 	LIMITS,
 	SETTINGS_BOUNDS,
 	type ChatEntry,
+	type ChatScope,
 	type ClientMessage,
 	type ClientPlayer,
 	type ClientRoom,
@@ -22,6 +23,7 @@ import {
 	type VoteKind
 } from '../../src/lib/protocol';
 import { buildGallery, countVotes, type StoredDrawing } from './gallery';
+import { hasProfanity, pottyPhrase } from './moderation';
 import { levenshtein, normalize } from './text';
 import { maskWord, maxHints, pickRevealIndex, revealSchedule } from './mask';
 import { drawerPoints, guesserTimePoints, ordinalBonus } from './scoring';
@@ -35,6 +37,8 @@ export const GRACE_MS = 60_000; // disconnected player keeps slot/score this lon
 // Correct guess this close behind another one earns the jeer.
 export const YOURE_GONNA_HAVE_TO_BE_FASTER_THAN_THAT_MS = 1000;
 export const SYNC_MS = 5000;
+export const REPEAT_LIMIT = 20; // sends of the same message before further repeats are blocked
+const REPEAT_TRACKED_MAX = 500; // distinct messages tracked per player, to bound memory
 
 /**
  * Accepted `wordSource` values. Settings arrive as untrusted wire JSON, so membership is checked
@@ -156,6 +160,8 @@ export class Room {
 	private syncTimer: TimerHandle | null = null;
 	private playerSeq = 0;
 	private disposed = false;
+	/** Per-player count of every normalized message sent, for REPEAT_LIMIT. */
+	private readonly repeatCounts = new Map<PlayerId, Map<string, number>>();
 
 	constructor(
 		code: string,
@@ -298,6 +304,7 @@ export class Room {
 			return;
 		}
 		this.players.delete(playerId);
+		this.repeatCounts.delete(playerId);
 
 		const idx = this.turnOrder.indexOf(playerId);
 		if (idx !== -1) {
@@ -696,7 +703,7 @@ export class Room {
 			return;
 		}
 		if (playerId === this.turn.drawerId || player.guessedThisTurn) {
-			this.sendChat({ id: playerId, name: player.name, text, scope: 'guessed' });
+			this.moderatedChat(player, text, 'guessed');
 			return;
 		}
 
@@ -734,14 +741,14 @@ export class Room {
 		// A wrong guess that *contains* the answer would spoil it — keep it in
 		// the post-guess channel instead of broadcasting.
 		if (guess.includes(word)) {
-			this.sendChat({ id: playerId, name: player.name, text, scope: 'guessed' });
+			this.moderatedChat(player, text, 'guessed');
 			return;
 		}
 
 		if (levenshtein(guess, word) === 1) {
 			this.deps.send(playerId, { type: 'guessResult', correct: false, close: true });
 		}
-		this.sendChat({ id: playerId, name: player.name, text, scope: 'all' });
+		this.moderatedChat(player, text, 'all');
 	}
 
 	private chat(playerId: PlayerId, rawText: string): void {
@@ -753,14 +760,74 @@ export class Room {
 
 		if (this.phase === 'drawing' && this.turn) {
 			if (playerId === this.turn.drawerId || player.guessedThisTurn) {
-				this.sendChat({ id: playerId, name: player.name, text, scope: 'guessed' });
+				this.moderatedChat(player, text, 'guessed');
 				return;
 			}
 			// A not-yet-guessed player's message during drawing is always a guess.
 			this.guess(playerId, text);
 			return;
 		}
-		this.sendChat({ id: playerId, name: player.name, text, scope: 'all' });
+		this.moderatedChat(player, text, 'all');
+	}
+
+	/** The word exempt from the potty-mouth filter: the live answer while
+	 * drawing, the just-revealed answer during reveal/finished. */
+	private filterExemptWord(): string | null {
+		if (this.phase === 'drawing') {
+			return this.turn?.word ?? null;
+		}
+		if (this.phase === 'reveal' || this.phase === 'finished') {
+			return this.lastWord;
+		}
+		return null;
+	}
+
+	/** Counts one send of `key` for `playerId`; false once it has hit REPEAT_LIMIT. */
+	private allowRepeat(playerId: PlayerId, key: string): boolean {
+		let counts = this.repeatCounts.get(playerId);
+		if (!counts) {
+			counts = new Map();
+			this.repeatCounts.set(playerId, counts);
+		}
+		const n = counts.get(key) ?? 0;
+		if (n >= REPEAT_LIMIT) {
+			return false;
+		}
+		// Past the tracking cap, new messages go uncounted rather than blocked —
+		// the cap bounds memory, it must never censor fresh material.
+		if (n > 0 || counts.size < REPEAT_TRACKED_MAX) {
+			counts.set(key, n + 1);
+		}
+		return true;
+	}
+
+	/**
+	 * Every player-authored message leaves through here: a message repeated
+	 * REPEAT_LIMIT times is blocked outright, and profanity that is not the
+	 * answer is swapped for a potty-mouth phrase. Correct guesses never reach
+	 * this path (they are announced via system chat), so neither rule can eat
+	 * a legitimate guess.
+	 */
+	private moderatedChat(player: Readonly<ServerPlayer>, text: string, scope: ChatScope): void {
+		if (!this.allowRepeat(player.id, normalize(text))) {
+			this.sendError(
+				player.id,
+				'rate_limited',
+				`You have said that ${REPEAT_LIMIT} times — the bit is dead`
+			);
+			return;
+		}
+		if (hasProfanity(text, this.filterExemptWord())) {
+			this.sendChat({
+				id: player.id,
+				name: player.name,
+				text: pottyPhrase(this.deps.random),
+				scope,
+				filtered: true
+			});
+			return;
+		}
+		this.sendChat({ id: player.id, name: player.name, text, scope });
 	}
 
 	private checkAllGuessed(): void {

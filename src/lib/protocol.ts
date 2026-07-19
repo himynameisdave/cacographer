@@ -106,6 +106,11 @@ export type ChatEntry = {
 	readonly name: string;
 	readonly text: string;
 	readonly scope: ChatScope;
+	/** True when the server swapped a profane message for a potty-mouth phrase;
+	 * the client renders these italicized. Absent-when-false (like
+	 * `guessResult.close`) — an omitted optional flag round-trips JSON fine,
+	 * unlike an `undefined` value. */
+	readonly filtered?: boolean;
 };
 
 // ---------------------------------------------------------------------------

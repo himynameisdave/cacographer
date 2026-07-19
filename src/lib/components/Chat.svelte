@@ -72,7 +72,7 @@
 						</span>
 					{/if}
 					<span class="name" style="color: {nameColor(entry.id)}">{entry.name}</span>
-					<span class="text">{entry.text}</span>
+					<span class="text" class:filtered={entry.filtered === true}>{entry.text}</span>
 				</div>
 			{/if}
 		{/each}
@@ -144,6 +144,12 @@
 
 	.msg .text {
 		min-width: 0;
+	}
+
+	/* The server swapped a profane message for a potty-mouth phrase. */
+	.msg .text.filtered {
+		font-style: italic;
+		color: var(--text-muted);
 	}
 
 	.msg .name::after {
