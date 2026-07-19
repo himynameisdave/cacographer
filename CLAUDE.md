@@ -11,13 +11,15 @@ bun run lint          # oxlint, strict — must be clean
 bun run format        # oxfmt --write (tabs, single quotes, 100 cols)
 bun run format:check  # what CI runs
 bun run check         # svelte-check (client, src/**), fails on warnings
-bun run check:server  # tsc (server/**, via server/tsconfig.json)
+bun run check:server  # tsc 7 native/Go (server/**, via server/tsconfig.json)
 bun run build         # static client → build/
 ```
 
 CI (`.github/workflows/ci.yml`) runs lint → format:check → check → check:server → test → build. All six must pass; run them locally before pushing. A Husky pre-commit hook (`.husky/pre-commit`) already runs format and lint on what you stage via `lint-staged`, then `check:server` over the whole server project; `bun run check` is CI-only.
 
 **The two typecheck scopes are separate on purpose.** svelte-check's tsconfig (via `.svelte-kit/tsconfig.json`) only reaches `src/**`, and the server is a Bun process with no DOM — so `server/tsconfig.json` is standalone, owns `server/**` plus the shared `src/lib/protocol.ts`, and is what `check:server` and oxlint's type-aware mode both use. Add a file under `server/` and it's covered automatically; there is no third scope.
+
+**The two scopes also run two different TypeScript majors, on purpose.** `check:server` runs TypeScript 7 — the native (Go) compiler — invoked as `node_modules/typescript-7/bin/tsc`, where `typescript-7` is a package alias (`npm:typescript@^7`). This puts the server typecheck on the same Go typechecker that `oxlint-tsgolint` already embeds, so the two can no longer disagree about `server/**`. The client scope (`bun run check`, svelte-check) stays on the default `typescript` devDependency, still TS 6, because svelte-check `^4.7.x` crashes on the TS 7 API surface (`typescript.sys` is undefined in the native port) and has no flag to point at a different compiler — it binds to the hoisted `typescript`, so that one has to be the version svelte-check tolerates. Both strict flags `server/tsconfig.json` leans on (`noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`) are honored by the native port. When svelte-check ships TS 7 support, collapse this back to a single `typescript` at 7 and drop the alias.
 
 ## Architecture rules (load-bearing — do not erode)
 
