@@ -1,7 +1,14 @@
 <div align="center">
   <h1>
-    cacographer <span style="font-weight: normal; font-size: 0.5em;">/kəˈkɒɡ.rə.fər/</span> <span style="font-style: italic; font-weight: normal; font-size: 0.5em;">(noun)</span>
+    cacographer <span style="font-family: monospace; font-weight: normal; font-size: 0.5em;">/kəˈkɒɡ.rə.fər/</span> <span style="font-style: italic; font-weight: normal; font-size: 0.5em;">(noun)</span>
   </h1>
+  <p style="font-style: italic;">
+    1. someone who is bad at spelling or handwriting.
+  </p>
+  <p style="font-style: italic;">
+    2. someone who can draw funny pictures.
+  </p>
+  <hr />
   <p>
     <a href="https://github.com/himynameisdave/cacographer/actions/workflows/ci.yml">
       <img src="https://github.com/himynameisdave/cacographer/actions/workflows/ci.yml/badge.svg" alt="CI" />
@@ -10,9 +17,6 @@
     <a href="https://app.fossa.com/projects/git%2Bgithub.com%2Fhimynameisdave%2Fcacographer?ref=badge_shield&issueType=security" alt="FOSSA Status"><img src="https://app.fossa.com/api/projects/git%2Bgithub.com%2Fhimynameisdave%2Fcacographer.svg?type=shield&issueType=security"/></a>
   </p>
 </div>
-
-1. someone who is bad at spelling or handwriting.
-2. someone who can draw funny pictures.
 
 If Core built [skribbl](https://skribbl.io/).
 
