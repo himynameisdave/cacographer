@@ -1,25 +1,18 @@
-<div align="center" margin="0 auto 20px">
+<div align="center">
   <h1>
-    cacographer <span style="font-style: italic; font-size: 0.5em;">/kəˈkɒɡ.rə.fər/</span> <span style="font-style: bold; font-size: 0.5em;">(noun)</span>
+    cacographer <span style="font-weight: normal; font-size: 0.5em;">/kəˈkɒɡ.rə.fər/</span> <span style="font-style: italic; font-weight: normal; font-size: 0.5em;">(noun)</span>
   </h1>
-  <p style="font-style: italic;">
-    1. someone who is bad at spelling or handwriting.
-  </p>
-  <p style="font-style: italic;">
-    2. someone who can draw funny pictures.
-  </p>
-  <div>
+  <p>
     <a href="https://github.com/himynameisdave/cacographer/actions/workflows/ci.yml">
       <img src="https://github.com/himynameisdave/cacographer/actions/workflows/ci.yml/badge.svg" alt="CI" />
     </a>
     <a href="https://app.fossa.com/projects/git%2Bgithub.com%2Fhimynameisdave%2Fcacographer?ref=badge_shield&issueType=license" alt="FOSSA Status"><img src="https://app.fossa.com/api/projects/git%2Bgithub.com%2Fhimynameisdave%2Fcacographer.svg?type=shield&issueType=license"/></a>
     <a href="https://app.fossa.com/projects/git%2Bgithub.com%2Fhimynameisdave%2Fcacographer?ref=badge_shield&issueType=security" alt="FOSSA Status"><img src="https://app.fossa.com/api/projects/git%2Bgithub.com%2Fhimynameisdave%2Fcacographer.svg?type=shield&issueType=security"/></a>
-  </div>
+  </p>
 </div>
 
-<!--
-**cacographer** `/kəˈkɒɡ.rə.fər/` _noun_ — **1.** _someone who is bad at spelling or handwriting._ **2.** _someone who can draw funny pictures._
--->
+1. someone who is bad at spelling or handwriting.
+2. someone who can draw funny pictures.
 
 If Core built [skribbl](https://skribbl.io/).
 
