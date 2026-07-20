@@ -31,8 +31,8 @@ jobs:
       - name: Typecheck server (tsc)
         run: bun run check:server
 
-      - name: Tests (engine + client)
-        run: bun test
+      - name: Tests (engine + client) + coverage floor
+        run: bun test --coverage
 
       - name: Build
         run: bun run build

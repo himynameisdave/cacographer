@@ -7,6 +7,7 @@ A Skribbl-clone drawing/guessing game. Product scope: `docs/PRD.md`. Architectur
 ```sh
 bun run dev           # game server (:3001) + Vite (:5173) together
 bun test              # all unit tests (engine + client)
+bun test --coverage   # + per-file coverage floor (what CI runs; plain `bun test` is ungated)
 bun run test:server   # engine tests only (server/**)
 bun run test:client   # client tests only (src/**)
 bun run lint          # oxlint, strict — must be clean
@@ -51,6 +52,12 @@ CI (`.github/workflows/ci.yml`) runs lint → format:check → check → check:s
 - Engine changes require `bun:test` coverage in `server/engine/*.test.ts`. Pure functions (scoring, masking, words, text) get direct unit tests; `Room` behavior is tested by driving a room with fake deps and asserting on the emitted messages — never by reaching into private state.
 - Anything timing-dependent must go through `deps.now`/`deps.schedule` so tests can advance a fake clock deterministically. Adding a raw `setTimeout`/`Date.now()` inside the engine is a bug. This applies to `RoomManager` too, not just `Room` — both take injected time/randomness.
 - Client tests live in `src/**/*.test.ts` and also run under `bun:test`. Svelte 5 rune modules (`*.svelte.ts`) are compiler macros, so `bun test` can't import them raw; `test/svelte-preload.ts` (wired via `bunfig.toml`) strips the types and runs Svelte's `compileModule` on import. Logic classes like `GameState` are tested by instantiating them and feeding `ServerMessage`s — no DOM, no component mounting.
+
+### Coverage is a floor, not a target — do not game it
+
+CI runs `bun test --coverage` and `bunfig.toml` sets a low `coverageThreshold` (0.7). Bun enforces it **per file** against the weakest of that file's line/function/statement coverage, so the gate is only ever as high as the least-covered file. It exists for **one** purpose: to fail CI when a file's coverage falls off a cliff — a large untested addition, a deleted test file, a whole module left uncovered. It is set deliberately _below_ current coverage as a safety net.
+
+**Never write a test whose purpose is to move that number.** A test earns its place by pinning a real behavior or contract — the ones already here assert on emitted messages, scoring, masking, reconnect timing, state after a `ServerMessage`. A test that calls a getter just so a line counts as covered, asserts nothing meaningful, or exists to turn a red gate green is worse than no test: it's dead weight that has to be read and maintained forever, and it quietly lowers the bar for what "tested" means. If a genuinely-important path is uncovered, cover it because it matters, not because the metric dipped. If coverage is low and there's nothing real to assert, **leave it low** — that's information, not a failure. Raising `coverageThreshold` to chase a percentage is the same anti-pattern one level up; don't.
 
 ## Workflow
 

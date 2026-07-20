@@ -2,3 +2,12 @@
 # Compile Svelte 5 rune modules (*.svelte.ts) on import so `bun test` can exercise
 # client logic like GameState. See test/svelte-preload.ts. Inert for server tests.
 preload = ["./test/svelte-preload.ts"]
+
+# Coverage floor, only enforced when coverage is generated (CI runs `bun test --coverage`;
+# a plain local `bun test` stays fast and ungated). Bun applies this PER FILE against the
+# lowest of that file's line/function/statement coverage, so the binding metric is whichever
+# file is weakest — today that's src/lib/game.svelte.ts's function coverage. This is a
+# deliberately LOW collapse-detector, set below current coverage on purpose: it fails CI when
+# a file's coverage falls off a cliff (a big untested addition, a deleted test file), NOT to
+# push the number toward 100%. Do not raise it to chase coverage — see CLAUDE.md "Testing".
+coverageThreshold = 0.7
