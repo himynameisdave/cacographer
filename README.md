@@ -1,8 +1,4 @@
-<div align="center">
-  <h1>
-    cacographer <span style="font-family: monospace; font-weight: normal; font-size: 0.5em;">/kəˈkɒɡ.rə.fər/</span> <span style="font-style: italic; font-weight: normal; font-size: 0.5em;">(noun)</span>
-  </h1>
-</div>
+# cacographer `/kəˈkɒɡ.rə.fər/` _(noun)_
 
 _1. someone who is bad at spelling or handwriting._
 
@@ -10,13 +6,9 @@ _2. someone who can draw funny pictures._
 
 ---
 
-<div align="center">
-  <a href="https://github.com/himynameisdave/cacographer/actions/workflows/ci.yml">
-    <img src="https://github.com/himynameisdave/cacographer/actions/workflows/ci.yml/badge.svg" alt="CI" />
-  </a>
-  <a href="https://app.fossa.com/projects/git%2Bgithub.com%2Fhimynameisdave%2Fcacographer?ref=badge_shield&issueType=license" alt="FOSSA Status"><img src="https://app.fossa.com/api/projects/git%2Bgithub.com%2Fhimynameisdave%2Fcacographer.svg?type=shield&issueType=license"/></a>
-  <a href="https://app.fossa.com/projects/git%2Bgithub.com%2Fhimynameisdave%2Fcacographer?ref=badge_shield&issueType=security" alt="FOSSA Status"><img src="https://app.fossa.com/api/projects/git%2Bgithub.com%2Fhimynameisdave%2Fcacographer.svg?type=shield&issueType=security"/></a>
-</div>
+[![CI](https://github.com/himynameisdave/cacographer/actions/workflows/ci.yml/badge.svg)](https://github.com/himynameisdave/cacographer/actions/workflows/ci.yml)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fhimynameisdave%2Fcacographer.svg?type=shield&issueType=license)](https://app.fossa.com/projects/git%2Bgithub.com%2Fhimynameisdave%2Fcacographer?ref=badge_shield&issueType=license)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fhimynameisdave%2Fcacographer.svg?type=shield&issueType=security)](https://app.fossa.com/projects/git%2Bgithub.com%2Fhimynameisdave%2Fcacographer?ref=badge_shield&issueType=security)
 
 If Core built [skribbl](https://skribbl.io/).
 
