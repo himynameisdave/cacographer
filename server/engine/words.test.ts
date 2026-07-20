@@ -56,50 +56,54 @@ describe('sampleChoices', () => {
 	test('returns count distinct words from the pool', () => {
 		const pool = ['a', 'b', 'c', 'd', 'e', 'f'];
 		const rands = [0.9, 0.1, 0.5];
-		const out = sampleChoices(pool, new Set(), 3, () => rands.shift() ?? 0);
-		expect(out).toHaveLength(3);
-		expect(new Set(out).size).toBe(3);
-		for (const w of out) {
+		const { choices, exhausted } = sampleChoices(pool, new Set(), 3, () => rands.shift() ?? 0);
+		expect(choices).toHaveLength(3);
+		expect(new Set(choices).size).toBe(3);
+		for (const w of choices) {
 			expect(pool).toContain(w);
 		}
+		expect(exhausted).toBe(false);
 	});
 
 	test('avoids words in used', () => {
 		const used = new Set(['a', 'c']);
-		const out = sampleChoices(['a', 'b', 'c', 'd'], used, 2, () => 0);
-		expect(out).toEqual(['b', 'd']);
+		const { choices } = sampleChoices(['a', 'b', 'c', 'd'], used, 2, () => 0);
+		expect(choices).toEqual(['b', 'd']);
 	});
 
-	test('clears used and reuses the full pool when the unused pool is too small', () => {
+	test('signals exhaustion and reuses the full pool when the unused pool is too small', () => {
 		const used = new Set(['a', 'b']);
-		const out = sampleChoices(['a', 'b', 'c'], used, 2, () => 0);
-		expect(used.size).toBe(0);
-		expect(out).toHaveLength(2);
-		expect(out).toEqual(['a', 'b']); // random()=0 keeps pool order
+		const { choices, exhausted } = sampleChoices(['a', 'b', 'c'], used, 2, () => 0);
+		expect(exhausted).toBe(true);
+		expect(used.size).toBe(2); // pure: caller owns the reset, sampleChoices leaves `used` intact
+		expect(choices).toHaveLength(2);
+		expect(choices).toEqual(['a', 'b']); // random()=0 keeps pool order
 	});
 
 	test('returns fewer than count when the whole pool is smaller', () => {
 		const used = new Set<string>();
-		const out = sampleChoices(['only'], used, 3, () => 0);
-		expect(out).toEqual(['only']);
+		const { choices } = sampleChoices(['only'], used, 3, () => 0);
+		expect(choices).toEqual(['only']);
 	});
 
 	test('deterministic with an injected random sequence', () => {
 		const rands = [0.5, 0];
 		// i=0: j = 0 + floor(0.5*4) = 2 → swap a/c → [c,b,a,d]
 		// i=1: j = 1 + floor(0*3) = 1 → keep b
-		const out = sampleChoices(['a', 'b', 'c', 'd'], new Set(), 2, () => rands.shift() ?? 0);
-		expect(out).toEqual(['c', 'b']);
+		const { choices } = sampleChoices(['a', 'b', 'c', 'd'], new Set(), 2, () => rands.shift() ?? 0);
+		expect(choices).toEqual(['c', 'b']);
 	});
 
 	test('random()=0 selects the first unused words in pool order', () => {
-		const out = sampleChoices(['x', 'y', 'z'], new Set(), 2, () => 0);
-		expect(out).toEqual(['x', 'y']);
+		const { choices } = sampleChoices(['x', 'y', 'z'], new Set(), 2, () => 0);
+		expect(choices).toEqual(['x', 'y']);
 	});
 
-	test('does not mutate the pool', () => {
+	test('does not mutate the pool or the used set', () => {
 		const pool = ['a', 'b', 'c', 'd'];
-		sampleChoices(pool, new Set(), 3, () => 0.7);
+		const used = new Set(['a']);
+		sampleChoices(pool, used, 3, () => 0.7);
 		expect(pool).toEqual(['a', 'b', 'c', 'd']);
+		expect([...used]).toEqual(['a']);
 	});
 });
