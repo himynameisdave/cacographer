@@ -33,6 +33,9 @@
 		"typescript-7": "npm:typescript@^7.0.2",
 		"vite": "^8.1.4"
 	},
+	"overrides": {
+		"cookie": "^0.7.0"
+	},
 	"lint-staged": {
 		"*.{ts,js,mjs,cjs}": [
 			"oxfmt --write",
