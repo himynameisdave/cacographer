@@ -24,28 +24,25 @@ export function buildWordPool(settings: Settings): string[] {
 
 /**
  * Sample `count` distinct choices, avoiding words already used this game.
- * If the unused pool runs dry (long games / tiny custom lists), the used set
- * is cleared and words may repeat rather than the game stalling.
+ * If the unused pool runs dry (long games / tiny custom lists), `exhausted` is
+ * true and the choices are drawn from the full pool so the game doesn't stall —
+ * the caller owning `used` should reset it. Pure: `used` is never mutated here.
  */
 export function sampleChoices(
 	pool: readonly string[],
-	// Mutated via used.clear() below when the pool runs dry, so this must stay a mutable Set.
-	// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- see comment above
-	used: Set<string>,
+	// Readonly<> wrapper needed on top of ReadonlySet — same tsgolint quirk as mask.ts.
+	used: Readonly<ReadonlySet<string>>,
 	count: number,
 	random: () => number = Math.random
-): string[] {
-	let available = pool.filter((w) => !used.has(w));
-	if (available.length < count) {
-		used.clear();
-		available = [...pool];
-	}
-	const arr = [...available];
+): { choices: string[]; exhausted: boolean } {
+	const unused = pool.filter((w) => !used.has(w));
+	const exhausted = unused.length < count;
+	const arr = exhausted ? [...pool] : unused;
 	const n = Math.min(count, arr.length);
 	for (let i = 0; i < n; i++) {
 		// `i < n <= arr.length` and `j` lands in `[i, arr.length - 1]`, so both reads are in bounds.
 		const j = i + Math.floor(random() * (arr.length - i));
 		[arr[i], arr[j]] = [arr[j]!, arr[i]!];
 	}
-	return arr.slice(0, n);
+	return { choices: arr.slice(0, n), exhausted };
 }

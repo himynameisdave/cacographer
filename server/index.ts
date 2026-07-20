@@ -6,8 +6,9 @@
 import { existsSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { type Server, type ServerWebSocket } from 'bun';
-import { type ClientMessage, type ServerMessage } from '../src/lib/protocol';
+import { type ServerMessage } from '../src/lib/protocol';
 import { RoomManager } from './engine/RoomManager';
+import { type Bucket, isClientMessage, safeStaticPath, take } from './net';
 
 const PORT = Number(process.env.PORT ?? 3001);
 
@@ -35,13 +36,8 @@ function sendTo(ws: Socket, msg: ServerMessage): void {
 }
 
 // ---------------------------------------------------------------------------
-// Rate limiting — simple token buckets refilled by timestamp
+// Rate limiting — per-socket token buckets (refill/spend math lives in net.ts)
 // ---------------------------------------------------------------------------
-
-type Bucket = {
-	tokens: number;
-	last: number;
-};
 
 type Buckets = {
 	draw: Bucket;
@@ -65,19 +61,6 @@ function bucketsFor(ws: Socket): Buckets {
 	return b;
 }
 
-// bucket.tokens/last are reassigned below (refill + spend), so this can't be Readonly<Bucket>.
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- see comment above
-function take(bucket: Bucket, ratePerSec: number, burst: number): boolean {
-	const now = Date.now();
-	bucket.tokens = Math.min(burst, bucket.tokens + ((now - bucket.last) / 1000) * ratePerSec);
-	bucket.last = now;
-	if (bucket.tokens >= 1) {
-		bucket.tokens -= 1;
-		return true;
-	}
-	return false;
-}
-
 // ---------------------------------------------------------------------------
 // Static build serving (production: adapter-static output in ./build)
 // ---------------------------------------------------------------------------
@@ -87,19 +70,7 @@ const hasBuild = existsSync(BUILD_DIR) && existsSync(path.join(BUILD_DIR, 'index
 
 function serveStatic(pathname: string): Response {
 	const indexHtml = path.join(BUILD_DIR, 'index.html');
-
-	let decoded: string;
-	try {
-		decoded = decodeURIComponent(pathname);
-	} catch {
-		decoded = '/';
-	}
-
-	// Resolve inside the build dir and guard path traversal.
-	let filePath = path.normalize(path.join(BUILD_DIR, decoded));
-	if (filePath !== BUILD_DIR && !filePath.startsWith(BUILD_DIR + path.sep)) {
-		filePath = indexHtml;
-	}
+	let filePath = safeStaticPath(BUILD_DIR, pathname);
 
 	// Directory or missing file → SPA fallback (adapter-static's fallback page).
 	let stat: ReturnType<typeof statSync> | null = null;
@@ -115,7 +86,7 @@ function serveStatic(pathname: string): Response {
 	const headers = new Headers();
 	if (filePath === indexHtml) {
 		headers.set('Cache-Control', 'no-cache');
-	} else if (decoded.startsWith('/_app/immutable')) {
+	} else if (pathname.startsWith('/_app/immutable')) {
 		headers.set('Cache-Control', 'public, max-age=31536000, immutable');
 	}
 
@@ -234,18 +205,6 @@ function handleJoin(ws: Socket, msg: Readonly<Record<string, unknown>>): void {
 	}
 }
 
-/**
- * The wire trust boundary: freshly-parsed JSON is `unknown`, and all we can establish here is
- * that it's an object carrying a string `type`. `Room.handleMessage` switches exhaustively on
- * that discriminant and each branch validates its own payload, so anything malformed past this
- * point is rejected there rather than trusted.
- */
-function isClientMessage(value: unknown): value is ClientMessage {
-	return (
-		typeof value === 'object' && value !== null && 'type' in value && typeof value.type === 'string'
-	);
-}
-
 function messageHandler(ws: Socket, raw: string | Buffer): void {
 	const size = typeof raw === 'string' ? Buffer.byteLength(raw) : raw.byteLength;
 	if (size > MAX_MESSAGE_BYTES) {
@@ -273,17 +232,24 @@ function messageHandler(ws: Socket, raw: string | Buffer): void {
 
 	// Joined: rate-limit, then hand off to the room.
 	const buckets = bucketsFor(ws);
+	const now = Date.now();
 	if (msg.type === 'draw') {
-		if (!take(buckets.draw, 60, 120)) {
+		const r = take(buckets.draw, 60, 120, now);
+		buckets.draw = r.bucket;
+		if (!r.allowed) {
 			return;
 		} // silently drop
 	} else if (msg.type === 'guess' || msg.type === 'chat') {
-		if (!take(buckets.text, 5, 10)) {
+		const r = take(buckets.text, 5, 10, now);
+		buckets.text = r.bucket;
+		if (!r.allowed) {
 			sendTo(ws, { type: 'error', code: 'rate_limited', message: 'Slow down' });
 			return;
 		}
 	} else {
-		if (!take(buckets.other, 10, 20)) {
+		const r = take(buckets.other, 10, 20, now);
+		buckets.other = r.bucket;
+		if (!r.allowed) {
 			return;
 		} // silently drop
 	}

@@ -573,12 +573,15 @@ export class Room {
 			p.guessOrder = null;
 		}
 
-		const choices = sampleChoices(
+		const { choices, exhausted } = sampleChoices(
 			this.wordPool,
 			this.usedWords,
 			this.settings.wordChoiceCount,
 			this.deps.random
 		);
+		if (exhausted) {
+			this.usedWords.clear();
+		}
 		const endsAt = this.deps.now() + CHOOSE_MS;
 		this.turn = {
 			drawerId: drawer.id,
