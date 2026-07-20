@@ -8,34 +8,46 @@ import { type Bucket, isClientMessage, safeStaticPath, take } from './net';
 
 describe('take (token bucket)', () => {
 	test('spends down to empty, then blocks — no refill at a fixed instant', () => {
+		// Thread each call's returned bucket into the next, as the real caller does.
+		let bucket: Bucket = { tokens: 3, last: 0 };
+		for (let i = 0; i < 3; i++) {
+			const r = take(bucket, 1, 3, 0);
+			expect(r.allowed).toBe(true);
+			({ bucket } = r);
+		}
+		expect(take(bucket, 1, 3, 0).allowed).toBe(false); // drained
+	});
+
+	test('does not mutate the bucket it is given', () => {
 		const bucket: Bucket = { tokens: 3, last: 0 };
-		expect(take(bucket, 1, 3, 0)).toBe(true);
-		expect(take(bucket, 1, 3, 0)).toBe(true);
-		expect(take(bucket, 1, 3, 0)).toBe(true);
-		expect(take(bucket, 1, 3, 0)).toBe(false); // drained
+		take(bucket, 1, 3, 0);
+		expect(bucket).toEqual({ tokens: 3, last: 0 });
 	});
 
 	test('refills by elapsed time at the configured rate', () => {
 		const bucket: Bucket = { tokens: 0, last: 0 };
 		// 1s at 5 tokens/s → 5 available; one is spent, leaving ~4.
-		expect(take(bucket, 5, 10, 1000)).toBe(true);
-		expect(bucket.tokens).toBeCloseTo(4, 6);
-		expect(bucket.last).toBe(1000);
+		const r = take(bucket, 5, 10, 1000);
+		expect(r.allowed).toBe(true);
+		expect(r.bucket.tokens).toBeCloseTo(4, 6);
+		expect(r.bucket.last).toBe(1000);
 	});
 
 	test('refill is capped at burst regardless of how long has passed', () => {
 		const bucket: Bucket = { tokens: 0, last: 0 };
 		// 100s at 5/s would be 500, but burst caps it at 10; one spent → 9.
-		expect(take(bucket, 5, 10, 100_000)).toBe(true);
-		expect(bucket.tokens).toBeCloseTo(9, 6);
+		const r = take(bucket, 5, 10, 100_000);
+		expect(r.allowed).toBe(true);
+		expect(r.bucket.tokens).toBeCloseTo(9, 6);
 	});
 
 	test('a fractional token below 1 does not allow the action', () => {
 		const bucket: Bucket = { tokens: 0, last: 0 };
 		// 0.5s at 1/s → 0.5 tokens, not enough to spend.
-		expect(take(bucket, 1, 10, 500)).toBe(false);
-		expect(bucket.tokens).toBeCloseTo(0.5, 6);
-		expect(bucket.last).toBe(500); // clock still advances even when blocked
+		const r = take(bucket, 1, 10, 500);
+		expect(r.allowed).toBe(false);
+		expect(r.bucket.tokens).toBeCloseTo(0.5, 6);
+		expect(r.bucket.last).toBe(500); // clock still advances even when blocked
 	});
 });
 

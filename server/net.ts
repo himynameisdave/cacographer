@@ -19,19 +19,21 @@ export type Bucket = {
 
 /**
  * Refill `bucket` for the time elapsed since `now` was last seen, then try to spend one token.
- * Returns whether a token was available (i.e. whether the action is allowed). `now` is a
- * millisecond timestamp supplied by the caller.
+ * Pure: returns whether a token was available (`allowed`) alongside the next bucket state the
+ * caller should store — the input is never mutated. `now` is a millisecond timestamp supplied
+ * by the caller.
  */
-// bucket.tokens/last are reassigned below (refill + spend), so this can't be Readonly<Bucket>.
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- see comment above
-export function take(bucket: Bucket, ratePerSec: number, burst: number, now: number): boolean {
-	bucket.tokens = Math.min(burst, bucket.tokens + ((now - bucket.last) / 1000) * ratePerSec);
-	bucket.last = now;
-	if (bucket.tokens >= 1) {
-		bucket.tokens -= 1;
-		return true;
+export function take(
+	bucket: Readonly<Bucket>,
+	ratePerSec: number,
+	burst: number,
+	now: number
+): { allowed: boolean; bucket: Bucket } {
+	const refilled = Math.min(burst, bucket.tokens + ((now - bucket.last) / 1000) * ratePerSec);
+	if (refilled >= 1) {
+		return { allowed: true, bucket: { tokens: refilled - 1, last: now } };
 	}
-	return false;
+	return { allowed: false, bucket: { tokens: refilled, last: now } };
 }
 
 // ---------------------------------------------------------------------------

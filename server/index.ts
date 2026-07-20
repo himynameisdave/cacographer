@@ -234,16 +234,22 @@ function messageHandler(ws: Socket, raw: string | Buffer): void {
 	const buckets = bucketsFor(ws);
 	const now = Date.now();
 	if (msg.type === 'draw') {
-		if (!take(buckets.draw, 60, 120, now)) {
+		const r = take(buckets.draw, 60, 120, now);
+		buckets.draw = r.bucket;
+		if (!r.allowed) {
 			return;
 		} // silently drop
 	} else if (msg.type === 'guess' || msg.type === 'chat') {
-		if (!take(buckets.text, 5, 10, now)) {
+		const r = take(buckets.text, 5, 10, now);
+		buckets.text = r.bucket;
+		if (!r.allowed) {
 			sendTo(ws, { type: 'error', code: 'rate_limited', message: 'Slow down' });
 			return;
 		}
 	} else {
-		if (!take(buckets.other, 10, 20, now)) {
+		const r = take(buckets.other, 10, 20, now);
+		buckets.other = r.bucket;
+		if (!r.allowed) {
 			return;
 		} // silently drop
 	}
