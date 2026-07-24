@@ -70,6 +70,7 @@
 		'Silent letters are the real opps.'
 	];
 	const splash = SPLASHES[Math.floor(Math.random() * SPLASHES.length)];
+	const year = new Date().getFullYear();
 
 	let codeInput = $state('');
 	let creating = $state(false);
@@ -175,10 +176,21 @@
 
 	<footer class="foot">{splash}</footer>
 
-	<nav class="legal-links" aria-label="Legal">
-		<a href="/privacy">Privacy Policy</a>
-		<a href="/terms">Terms &amp; Conditions</a>
-	</nav>
+	<div class="site-footer">
+		<p>
+			© {year}
+			<a href="https://github.com/himynameisdave" target="_blank" rel="noopener noreferrer"
+				>himynameisdave</a>
+		</p>
+		<nav aria-label="Legal">
+			<a href="https://github.com/himynameisdave/cacographer" target="_blank" rel="noopener noreferrer"
+				>GitHub</a>
+			·
+			<a href="/privacy">Privacy Policy</a>
+			·
+			<a href="/terms">Terms &amp; Conditions</a>
+		</nav>
+	</div>
 </main>
 
 <style>
@@ -317,23 +329,25 @@
 	}
 
 	/* Pinned to the bottom of the page, independent of the centered content above. */
-	.legal-links {
+	.site-footer {
 		position: absolute;
 		left: 0;
 		right: 0;
 		bottom: 1.5rem;
 		display: flex;
-		justify-content: center;
-		gap: 1rem;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.5rem;
 		font-size: 0.8rem;
+		color: var(--text-faint);
 	}
 
-	.legal-links a {
+	.site-footer a {
 		color: var(--text-faint);
 		text-decoration: none;
 	}
 
-	.legal-links a:hover {
+	.site-footer a:hover {
 		color: var(--text-muted);
 		text-decoration: underline;
 	}
