@@ -75,7 +75,11 @@
 	<h2>Questions</h2>
 	<p>
 		Cacographer is an open-source side project. Questions or concerns are welcome as
-		<a href="https://github.com/himynameisdave/cacographer/issues/new">a new issue on GitHub</a>.
+		<a
+			href="https://github.com/himynameisdave/cacographer/issues/new"
+			target="_blank"
+			rel="noopener noreferrer">a new issue on GitHub</a
+		>.
 	</p>
 
 	<p class="disclaimer">

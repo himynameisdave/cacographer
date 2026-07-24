@@ -67,7 +67,8 @@
 	<h2>Open source</h2>
 	<p>
 		Cacographer's source is available on
-		<a href="https://github.com/himynameisdave/cacographer">GitHub</a>
+		<a href="https://github.com/himynameisdave/cacographer" target="_blank" rel="noopener noreferrer"
+			>GitHub</a>
 		under the MIT License. Anything you draw or type is relayed live to the other players in your
 		room to make the game work, and isn't stored beyond that — see the
 		<a href="/privacy">Privacy Policy</a> for details.
@@ -79,7 +80,11 @@
 	<h2>Questions</h2>
 	<p>
 		Questions or concerns are welcome as
-		<a href="https://github.com/himynameisdave/cacographer/issues/new">a new issue on GitHub</a>.
+		<a
+			href="https://github.com/himynameisdave/cacographer/issues/new"
+			target="_blank"
+			rel="noopener noreferrer">a new issue on GitHub</a
+		>.
 	</p>
 
 	<p class="disclaimer">
