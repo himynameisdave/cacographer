@@ -52,6 +52,12 @@
 		for any damages arising from your use of the app.
 	</p>
 
+	<h2>Governing law</h2>
+	<p>
+		These terms are governed by the laws of Canada, without regard to conflict-of-law principles
+		— regardless of where you access Cacographer from or where it happens to be hosted.
+	</p>
+
 	<h2>Changes to the service</h2>
 	<p>
 		Cacographer may be changed, paused, or shut down at any time without notice — it's maintained
