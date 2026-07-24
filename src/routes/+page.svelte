@@ -173,7 +173,13 @@
 		</section>
 	</div>
 
-	<footer class="foot">{splash}</footer>
+	<footer class="foot">
+		<p class="splash">{splash}</p>
+		<nav class="legal-links" aria-label="Legal">
+			<a href="/privacy">Privacy Policy</a>
+			<a href="/terms">Terms &amp; Conditions</a>
+		</nav>
+	</footer>
 </main>
 
 <style>
@@ -286,9 +292,16 @@
 	}
 
 	.foot {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.9rem;
+		text-align: center;
+	}
+
+	.splash {
 		color: var(--text-muted);
 		font-size: 1.1rem;
-		text-align: center;
 		animation: splash-pulse 1.8s ease-in-out infinite;
 	}
 
@@ -305,8 +318,24 @@
 	}
 
 	@media (prefers-reduced-motion: reduce) {
-		.foot {
+		.splash {
 			animation: none;
 		}
+	}
+
+	.legal-links {
+		display: flex;
+		gap: 1rem;
+		font-size: 0.8rem;
+	}
+
+	.legal-links a {
+		color: var(--text-faint);
+		text-decoration: none;
+	}
+
+	.legal-links a:hover {
+		color: var(--text-muted);
+		text-decoration: underline;
 	}
 </style>
