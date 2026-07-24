@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { serverBase } from '$lib/realtime/urls';
+	import Copyright from 'svelte-copyright';
 
 	/** Minecraft-style splash lines — one is picked at random per page load. */
 	const SPLASHES = [
@@ -174,10 +175,29 @@
 	</div>
 
 	<footer class="foot">{splash}</footer>
+
+	<div class="site-footer">
+		<p>
+			<Copyright position="post"
+				><a href="https://github.com/himynameisdave" target="_blank" rel="noopener noreferrer"
+					>himynameisdave</a
+				></Copyright
+			>
+		</p>
+		<nav aria-label="Legal">
+			<a href="https://github.com/himynameisdave/cacographer" target="_blank" rel="noopener noreferrer"
+				>GitHub</a>
+			·
+			<a href="/privacy">Privacy Policy</a>
+			·
+			<a href="/terms">Terms &amp; Conditions</a>
+		</nav>
+	</div>
 </main>
 
 <style>
 	.home {
+		position: relative;
 		min-height: 100dvh;
 		display: flex;
 		flex-direction: column;
@@ -308,5 +328,29 @@
 		.foot {
 			animation: none;
 		}
+	}
+
+	/* Pinned to the bottom of the page, independent of the centered content above. */
+	.site-footer {
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: 1.5rem;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: 0.8rem;
+		color: var(--text-faint);
+	}
+
+	.site-footer a {
+		color: var(--text-faint);
+		text-decoration: none;
+	}
+
+	.site-footer a:hover {
+		color: var(--text-muted);
+		text-decoration: underline;
 	}
 </style>
