@@ -173,17 +173,17 @@
 		</section>
 	</div>
 
-	<footer class="foot">
-		<p class="splash">{splash}</p>
-		<nav class="legal-links" aria-label="Legal">
-			<a href="/privacy">Privacy Policy</a>
-			<a href="/terms">Terms &amp; Conditions</a>
-		</nav>
-	</footer>
+	<footer class="foot">{splash}</footer>
+
+	<nav class="legal-links" aria-label="Legal">
+		<a href="/privacy">Privacy Policy</a>
+		<a href="/terms">Terms &amp; Conditions</a>
+	</nav>
 </main>
 
 <style>
 	.home {
+		position: relative;
 		min-height: 100dvh;
 		display: flex;
 		flex-direction: column;
@@ -292,16 +292,9 @@
 	}
 
 	.foot {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 0.9rem;
-		text-align: center;
-	}
-
-	.splash {
 		color: var(--text-muted);
 		font-size: 1.1rem;
+		text-align: center;
 		animation: splash-pulse 1.8s ease-in-out infinite;
 	}
 
@@ -318,13 +311,19 @@
 	}
 
 	@media (prefers-reduced-motion: reduce) {
-		.splash {
+		.foot {
 			animation: none;
 		}
 	}
 
+	/* Pinned to the bottom of the page, independent of the centered content above. */
 	.legal-links {
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: 1.5rem;
 		display: flex;
+		justify-content: center;
 		gap: 1rem;
 		font-size: 0.8rem;
 	}
