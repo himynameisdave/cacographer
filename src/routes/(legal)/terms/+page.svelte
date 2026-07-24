@@ -78,8 +78,8 @@
 
 	<h2>Questions</h2>
 	<p>
-		Questions or concerns are welcome as an issue on
-		<a href="https://github.com/himynameisdave/cacographer">GitHub</a>.
+		Questions or concerns are welcome as
+		<a href="https://github.com/himynameisdave/cacographer/issues/new">a new issue on GitHub</a>.
 	</p>
 
 	<p class="disclaimer">
