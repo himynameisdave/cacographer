@@ -30,7 +30,7 @@
 		</li>
 		<li>
 			Chat has a light profanity filter, but it's a nudge for a trusted group, not a moderation
-			system — you're responsible for what you draw and type, and hosts are responsible for who
+			system. You're responsible for what you draw and type, and hosts are responsible for who
 			they invite.
 		</li>
 		<li>
