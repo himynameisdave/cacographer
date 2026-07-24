@@ -178,7 +178,7 @@
 
 	<div class="site-footer">
 		<p>
-			<Copyright
+			<Copyright position="post"
 				><a href="https://github.com/himynameisdave" target="_blank" rel="noopener noreferrer"
 					>himynameisdave</a
 				></Copyright
