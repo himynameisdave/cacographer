@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { serverBase } from '$lib/realtime/urls';
+	import Copyright from 'svelte-copyright';
 
 	/** Minecraft-style splash lines — one is picked at random per page load. */
 	const SPLASHES = [
@@ -70,7 +71,6 @@
 		'Silent letters are the real opps.'
 	];
 	const splash = SPLASHES[Math.floor(Math.random() * SPLASHES.length)];
-	const year = new Date().getFullYear();
 
 	let codeInput = $state('');
 	let creating = $state(false);
@@ -178,9 +178,11 @@
 
 	<div class="site-footer">
 		<p>
-			© {year}
-			<a href="https://github.com/himynameisdave" target="_blank" rel="noopener noreferrer"
-				>himynameisdave</a>
+			<Copyright
+				><a href="https://github.com/himynameisdave" target="_blank" rel="noopener noreferrer"
+					>himynameisdave</a
+				></Copyright
+			>
 		</p>
 		<nav aria-label="Legal">
 			<a href="https://github.com/himynameisdave/cacographer" target="_blank" rel="noopener noreferrer"
