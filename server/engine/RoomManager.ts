@@ -1,5 +1,5 @@
 import { Room, defaultDeps, type RoomDeps } from './Room';
-import { type PlayerId, type ServerMessage } from '../../src/lib/protocol';
+import type { PlayerId, ServerMessage } from '../../src/lib/protocol';
 
 export const TEARDOWN_MS = 60_000;
 
@@ -64,7 +64,7 @@ export class RoomManager {
 	private scheduleTeardown(code: string): void {
 		this.deps.schedule(() => {
 			const room = this.rooms.get(code);
-			if (room && room.connectedCount === 0) {
+			if (room?.connectedCount === 0) {
 				room.dispose();
 				this.rooms.delete(code);
 			}

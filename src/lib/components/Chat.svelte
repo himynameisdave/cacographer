@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { type PlayerIdentity } from '$lib/game.svelte';
+	import type { PlayerIdentity } from '$lib/game.svelte';
 	import { playerColor } from '$lib/identity';
 	import { LIMITS, type ChatEntry, type PlayerId } from '$lib/protocol';
 

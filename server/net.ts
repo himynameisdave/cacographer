@@ -6,7 +6,7 @@
  * refill math is deterministic under test, the same reason the engine injects its clock.
  */
 import path from 'node:path';
-import { type ClientMessage } from '../src/lib/protocol';
+import type { ClientMessage } from '../src/lib/protocol';
 
 // ---------------------------------------------------------------------------
 // Rate limiting — token buckets refilled by elapsed time

@@ -623,8 +623,12 @@ export class Room {
 		}
 		const { choices } = this.turn;
 		// Non-empty by construction: startGame() refuses an empty word pool and wordChoiceCount
-		// clamps to SETTINGS_BOUNDS' floor of 2.
-		this.beginDrawing(choices[Math.floor(this.deps.random() * choices.length)]!);
+		// clamps to SETTINGS_BOUNDS' floor of 2, so the miss branch is unreachable.
+		const choice = choices[Math.floor(this.deps.random() * choices.length)];
+		if (choice === undefined) {
+			return;
+		}
+		this.beginDrawing(choice);
 	}
 
 	private chooseWord(playerId: PlayerId, word: string): void {
@@ -678,7 +682,10 @@ export class Room {
 	}
 
 	private revealLetter(): void {
-		if (this.phase !== 'drawing' || this.turn === null || this.turn.word === null) {
+		if (this.phase !== 'drawing' || this.turn === null) {
+			return;
+		}
+		if (this.turn.word === null) {
 			return;
 		}
 		const idx = pickRevealIndex(this.turn.word, this.turn.revealed, this.deps.random);
@@ -695,13 +702,20 @@ export class Room {
 	// -------------------------------------------------------------------------
 
 	private guess(playerId: PlayerId, rawText: string): void {
-		const player = this.players.get(playerId)!;
+		const player = this.players.get(playerId);
+		if (player === undefined) {
+			return;
+		}
 		const text = rawText.trim().slice(0, LIMITS.chat);
 		if (!text) {
 			return;
 		}
 
-		if (this.phase !== 'drawing' || this.turn === null || this.turn.word === null) {
+		// A non-null `word` already implies a non-null turn, but TS narrows `this.turn` only from
+		// its own check — hence both, rather than the `this.turn?.word` chain oxlint suggests
+		// (which would silently stop catching a null turn).
+		const word = this.turn?.word ?? null;
+		if (this.phase !== 'drawing' || this.turn === null || word === null) {
 			this.chat(playerId, text);
 			return;
 		}
@@ -711,7 +725,6 @@ export class Room {
 		}
 
 		const guess = normalize(text);
-		const { word } = this.turn;
 
 		if (guess === word) {
 			const now = this.deps.now();
@@ -755,7 +768,10 @@ export class Room {
 	}
 
 	private chat(playerId: PlayerId, rawText: string): void {
-		const player = this.players.get(playerId)!;
+		const player = this.players.get(playerId);
+		if (player === undefined) {
+			return;
+		}
 		const text = rawText.trim().slice(0, LIMITS.chat);
 		if (!text) {
 			return;
@@ -837,8 +853,9 @@ export class Room {
 		if (this.phase !== 'drawing' || !this.turn) {
 			return;
 		}
+		const { drawerId } = this.turn;
 		const eligible = [...this.players.values()].filter(
-			(p: Readonly<ServerPlayer>) => p.id !== this.turn!.drawerId && p.connected
+			(p: Readonly<ServerPlayer>) => p.id !== drawerId && p.connected
 		);
 		if (eligible.every((p: Readonly<ServerPlayer>) => p.guessedThisTurn)) {
 			this.endTurn('all_guessed');
@@ -945,10 +962,10 @@ export class Room {
 		if (this.phase !== 'drawing' || this.turn?.drawerId !== playerId) {
 			return;
 		}
-		if (this.ops.length === 0) {
+		const op = this.ops.pop();
+		if (op === undefined) {
 			return;
 		}
-		const op = this.ops.pop()!;
 		if (this.redoStack.length >= REDO_LIMIT) {
 			this.redoStack.shift();
 		}
@@ -960,10 +977,11 @@ export class Room {
 		if (this.phase !== 'drawing' || this.turn?.drawerId !== playerId) {
 			return;
 		}
-		if (this.redoStack.length === 0) {
+		const op = this.redoStack.pop();
+		if (op === undefined) {
 			return;
 		}
-		this.ops.push(this.redoStack.pop()!);
+		this.ops.push(op);
 		this.broadcast({ type: 'canvasState', ops: this.ops });
 	}
 
@@ -1013,9 +1031,9 @@ export class Room {
 				timePoints.push(time);
 				gains[p.id] = time + ordinalBonus(p.guessOrder);
 			}
+			const { drawerId } = this.turn;
 			const eligible = [...this.players.values()].filter(
-				(p: Readonly<ServerPlayer>) =>
-					p.id !== this.turn!.drawerId && (p.connected || p.guessedThisTurn)
+				(p: Readonly<ServerPlayer>) => p.id !== drawerId && (p.connected || p.guessedThisTurn)
 			);
 			const drawerGain = drawerPoints(timePoints, eligible.length);
 			if (drawerGain > 0) {

@@ -4,7 +4,7 @@
  * stale-socket handling are deterministic — no real sockets, no wall-clock waits.
  */
 import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
-import { type ServerMessage } from '../protocol';
+import type { ServerMessage } from '../protocol';
 import { GameSocket, type SocketStatus } from './client';
 
 type Listener = (ev: Readonly<{ data?: string }>) => void;

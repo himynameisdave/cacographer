@@ -61,7 +61,9 @@ const PROFANITY: ReadonlySet<string> = new Set([
 ]);
 
 /** Broadcast in place of a profane message, italicized after the sender's name. */
-export const POTTY_PHRASES: readonly string[] = [
+// Typed as a non-empty tuple so `POTTY_PHRASES[0]` is `string`, not `string | undefined` — that
+// is what lets pottyPhrase() pick without an unchecked assertion.
+export const POTTY_PHRASES: readonly [string, ...string[]] = [
 	'...has a potty mouth...',
 	'...kisses their mother with that mouth...',
 	'...would make a sailor blush...',
@@ -94,6 +96,7 @@ export function hasProfanity(text: string, exemptWord: string | null): boolean {
 
 /** One of POTTY_PHRASES, picked by the injected RNG. */
 export function pottyPhrase(random: () => number): string {
-	// random() ∈ [0, 1) and the list is a non-empty constant, so the index is valid.
-	return POTTY_PHRASES[Math.floor(random() * POTTY_PHRASES.length)]!;
+	// random() ∈ [0, 1) and the list is a non-empty constant, so the index is always valid; the
+	// fallback is unreachable and exists only to keep the read checked.
+	return POTTY_PHRASES[Math.floor(random() * POTTY_PHRASES.length)] ?? POTTY_PHRASES[0];
 }

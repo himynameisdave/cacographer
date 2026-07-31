@@ -5,9 +5,10 @@
  */
 import { existsSync, statSync } from 'node:fs';
 import path from 'node:path';
-import { type Server, type ServerWebSocket } from 'bun';
-import { type ServerMessage } from '../src/lib/protocol';
+import type { Server, ServerWebSocket } from 'bun';
+import type { ServerMessage } from '../src/lib/protocol';
 import { RoomManager } from './engine/RoomManager';
+import { logger } from './log';
 import { type Bucket, isClientMessage, safeStaticPath, take } from './net';
 
 const PORT = Number(process.env.PORT ?? 3001);
@@ -136,10 +137,10 @@ function fetchHandler(req: Request, server: Server<SocketData>): Response | unde
 		}
 
 		const roomMatch = /^\/api\/rooms\/(?<code>[^/]+)$/u.exec(pathname);
-		if (req.method === 'GET' && roomMatch?.groups) {
-			// `code` is a non-optional group in the pattern above, so any match defines it —
-			// `groups` is just typed as an open record.
-			const room = manager.get(roomMatch.groups.code!);
+		// `code` is a non-optional group in the pattern above, so any match defines it — `groups`
+		// is just typed as an open record, hence the explicit undefined check.
+		if (req.method === 'GET' && roomMatch?.groups?.code !== undefined) {
+			const room = manager.get(roomMatch.groups.code);
 			if (!room) {
 				return json({ exists: false });
 			}
@@ -224,8 +225,9 @@ function messageHandler(ws: Socket, raw: string | Buffer): void {
 	}
 	const msg = parsed;
 
-	// Not joined yet: the only acceptable message is 'join'.
-	if (ws.data.playerId === null) {
+	// Not joined yet: the only acceptable message is 'join'. handleJoin sets `code` and `playerId`
+	// together, so checking both here is what narrows `code` for the dispatch below.
+	if (ws.data.playerId === null || ws.data.code === null) {
 		handleJoin(ws, msg);
 		return;
 	}
@@ -254,19 +256,16 @@ function messageHandler(ws: Socket, raw: string | Buffer): void {
 		} // silently drop
 	}
 
-	// data.code is `string | null` but handleJoin sets it before this point is ever reached — see
-	// the early return on ws.data.playerId === null above.
-	manager.get(ws.data.code!)?.handleMessage(ws.data.playerId, msg);
+	manager.get(ws.data.code)?.handleMessage(ws.data.playerId, msg);
 }
 
 function closeHandler(ws: Socket): void {
 	const key = `${ws.data.code}:${ws.data.playerId}`;
 	// Identity check: after a same-name rejoin a NEW socket owns this key, and
 	// the OLD socket's close must not disconnect the player.
-	if (ws.data.playerId !== null && registry.get(key) === ws) {
+	if (ws.data.playerId !== null && ws.data.code !== null && registry.get(key) === ws) {
 		registry.delete(key);
-		// See the comment on the equivalent call in messageHandler above.
-		manager.get(ws.data.code!)?.disconnect(ws.data.playerId);
+		manager.get(ws.data.code)?.disconnect(ws.data.playerId);
 	}
 }
 
@@ -283,7 +282,7 @@ const server = Bun.serve<SocketData>({
 	}
 });
 
-console.log(
+logger.info(
 	`Cacographer game server listening on http://localhost:${server.port} ` +
 		`(${hasBuild ? 'serving static build from ./build' : 'dev mode: no ./build, Vite serves the app'})`
 );

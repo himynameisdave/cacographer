@@ -10,7 +10,7 @@
 		"test": "bun test",
 		"test:server": "bun test server",
 		"test:client": "bun test src",
-		"lint": "oxlint --deny-warnings --type-aware",
+		"lint": "oxlint -c oxlint.config.ts --deny-warnings --type-aware",
 		"format": "oxfmt",
 		"format:check": "oxfmt --check",
 		"prepare": "husky || true; svelte-kit sync || echo ''",
@@ -19,6 +19,7 @@
 		"check:server": "node_modules/typescript-7/bin/tsc -p server/tsconfig.json --noEmit"
 	},
 	"devDependencies": {
+		"@himynameisdave/oxlint-config": "~1.1.0",
 		"@sveltejs/adapter-static": "^3.0.10",
 		"@sveltejs/kit": "^2.69.3",
 		"@sveltejs/vite-plugin-svelte": "^7.2.0",
@@ -27,7 +28,7 @@
 		"husky": "^9.1.7",
 		"lint-staged": "^17.2.0",
 		"oxfmt": "^0.60.0",
-		"oxlint": "^1.75.0",
+		"oxlint": "^1.76.0",
 		"oxlint-tsgolint": "^7.0.2001",
 		"svelte": "^5.56.8",
 		"svelte-check": "^4.7.2",
@@ -42,10 +43,10 @@
 	"lint-staged": {
 		"*.{ts,js,mjs,cjs}": [
 			"oxfmt --write",
-			"oxlint --deny-warnings --type-aware"
+			"oxlint -c oxlint.config.ts --deny-warnings --type-aware"
 		],
 		"*.svelte": [
-			"oxlint --deny-warnings --type-aware"
+			"oxlint -c oxlint.config.ts --deny-warnings --type-aware"
 		],
 		"*.{json,md,yml,yaml,css}": [
 			"oxfmt --write"

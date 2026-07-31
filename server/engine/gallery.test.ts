@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { type DrawOp, type PlayerId, type VoteKind } from '../../src/lib/protocol';
+import type { DrawOp, PlayerId, VoteKind } from '../../src/lib/protocol';
 import { buildGallery, countVotes, type StoredDrawing } from './gallery';
 
 const OPS: DrawOp[] = [

@@ -4,8 +4,8 @@
  * the same reason Room is tested this way (CLAUDE.md).
  */
 import { describe, expect, test } from 'bun:test';
-import { type PlayerId, type ServerMessage } from '../../src/lib/protocol';
-import { type RoomDeps, type TimerHandle } from './Room';
+import type { PlayerId, ServerMessage } from '../../src/lib/protocol';
+import type { RoomDeps, TimerHandle } from './Room';
 import { type ManagerDeps, RoomManager, TEARDOWN_MS } from './RoomManager';
 import { FakeClock } from './testUtils';
 
