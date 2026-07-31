@@ -10,6 +10,10 @@
 		"skipLibCheck": true,
 		"sourceMap": true,
 		"strict": true,
+		// `.svelte-kit/tsconfig.json` sets this too, but only once `svelte-kit sync` has produced it.
+		// Setting it here as well means a checkout that has not synced yet fails to *extend* rather
+		// than falling back to emitting `.js`/`.js.map` next to every source file under `src/`.
+		"noEmit": true,
 		"moduleResolution": "bundler"
 	}
 	// Path aliases are handled by https://svelte.dev/docs/kit/configuration#alias
