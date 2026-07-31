@@ -39,7 +39,7 @@ describe('hasProfanity', () => {
 
 describe('pottyPhrase', () => {
 	test('picks from POTTY_PHRASES by the injected rng', () => {
-		expect(pottyPhrase(() => 0)).toBe(POTTY_PHRASES[0]!);
+		expect(pottyPhrase(() => 0)).toBe(POTTY_PHRASES[0]);
 		expect(pottyPhrase(() => 0.999)).toBe(POTTY_PHRASES.at(-1)!);
 		for (const r of [0.1, 0.4, 0.7]) {
 			expect(POTTY_PHRASES).toContain(pottyPhrase(() => r));

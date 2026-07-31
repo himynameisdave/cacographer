@@ -1,6 +1,6 @@
 import builtin from '../data/words.json';
 import { normalize } from './text';
-import { type Settings } from '../../src/lib/protocol';
+import type { Settings } from '../../src/lib/protocol';
 
 /** Word pool for a game per the room's word-source setting. Normalized + deduped. */
 export function buildWordPool(settings: Settings): string[] {
@@ -40,9 +40,14 @@ export function sampleChoices(
 	const arr = exhausted ? [...pool] : unused;
 	const n = Math.min(count, arr.length);
 	for (let i = 0; i < n; i++) {
-		// `i < n <= arr.length` and `j` lands in `[i, arr.length - 1]`, so both reads are in bounds.
+		// `i < n <= arr.length` and `j` lands in `[i, arr.length - 1]`, so both reads are in bounds;
+		// the guard is what makes that checked rather than asserted, and never skips a real swap.
 		const j = i + Math.floor(random() * (arr.length - i));
-		[arr[i], arr[j]] = [arr[j]!, arr[i]!];
+		const a = arr[i];
+		const b = arr[j];
+		if (a !== undefined && b !== undefined) {
+			[arr[i], arr[j]] = [b, a];
+		}
 	}
 	return { choices: arr.slice(0, n), exhausted };
 }

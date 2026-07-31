@@ -22,14 +22,15 @@ export function levenshtein(a: string, b: string): number {
 	}
 
 	// Both rows are allocated with `b.length + 1` entries above and every read below is bounded by
-	// the loop conditions, so the non-null assertions hold for the whole nest.
+	// the loop conditions, so no `?? 0` fallback here is reachable — they exist so the reads are
+	// checked rather than asserted. Same for the `?? 0` on the returned cell.
 	for (let i = 1; i <= a.length; i++) {
 		curr[0] = i;
 		for (let j = 1; j <= b.length; j++) {
 			const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-			curr[j] = Math.min(prev[j]! + 1, curr[j - 1]! + 1, prev[j - 1]! + cost);
+			curr[j] = Math.min((prev[j] ?? 0) + 1, (curr[j - 1] ?? 0) + 1, (prev[j - 1] ?? 0) + cost);
 		}
 		[prev, curr] = [curr, prev];
 	}
-	return prev[b.length]!;
+	return prev[b.length] ?? 0;
 }
