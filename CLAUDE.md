@@ -13,14 +13,18 @@ bun run test:client   # client tests only (src/**)
 bun run lint          # oxlint, strict — must be clean
 bun run format        # oxfmt --write (tabs, single quotes, 100 cols)
 bun run format:check  # what CI runs
+bun run test:e2e      # Playwright end-to-end suite (builds client + boots prod server on :3100)
+bun run test:e2e:headed  # same, visible browser windows, slowed down (SLOWMO=<ms> to tune)
+bun run test:e2e:ui   # Playwright UI mode (time-travel debugging)
 bun run check         # svelte-check-rs (client, src/**), fails on warnings
 bun run check:server  # tsc 7 native/Go (server/**, via server/tsconfig.json)
+bun run check:e2e     # tsc 7 native (e2e/**, via e2e/tsconfig.json)
 bun run build         # static client → build/
 ```
 
-CI (`.github/workflows/ci.yml`) runs lint → format:check → check → check:server → test → build. All six must pass; run them locally before pushing. A Husky pre-commit hook (`.husky/pre-commit`) already runs format and lint on what you stage via `lint-staged`, then `check:server` and `check` over the whole server and client projects (~0.8s combined).
+CI (`.github/workflows/ci.yml`) runs lint → format:check → check → check:server → check:e2e → test → build, plus a parallel `e2e` job that runs the Playwright suite against the production server shape. All must pass; run them locally before pushing. A Husky pre-commit hook (`.husky/pre-commit`) already runs format and lint on what you stage via `lint-staged`, then `check:server` and `check` over the whole server and client projects (~0.8s combined).
 
-**The two typecheck scopes are separate on purpose.** The client tsconfig (via `.svelte-kit/tsconfig.json`) only reaches `src/**`, and the server is a Bun process with no DOM — so `server/tsconfig.json` is standalone, owns `server/**` plus the shared `src/lib/protocol.ts`, and is what `check:server` and oxlint's type-aware mode both use. Add a file under `server/` and it's covered automatically; there is no third scope.
+**The two typecheck scopes are separate on purpose.** The client tsconfig (via `.svelte-kit/tsconfig.json`) only reaches `src/**`, and the server is a Bun process with no DOM — so `server/tsconfig.json` is standalone, owns `server/**` plus the shared `src/lib/protocol.ts`, and is what `check:server` and oxlint's type-aware mode both use. Add a file under `server/` and it's covered automatically. The Playwright suite under `e2e/` is a third, deliberately separate scope (`e2e/tsconfig.json`, checked by `check:e2e`): it needs DOM + node + Playwright types together, which neither existing scope should absorb.
 
 **Both scopes run the same TypeScript, and it is TS 7 — the native (Go) compiler.** `check:server` is plain `tsc`, and `bun run check` is [`svelte-check-rs`](https://github.com/pheuter/svelte-check-rs), which transforms `.svelte` files in Rust and hands the result to `tsgo` (resolved from `node_modules/.bin/tsgo`, which the `typescript` devDependency provides). That puts client typecheck, server typecheck, and the Go typechecker `oxlint-tsgolint` embeds all on one compiler, so none of the three can disagree. This replaced the original `svelte-check`, which pinned the client scope to TS 6 — it binds to the hoisted `typescript` and crashes on the TS 7 API surface (`typescript.sys` is undefined in the native port), which is why a `typescript-7` package alias used to exist alongside it. Both alias and duplicate major are gone; there is one `typescript` again. `svelte-check-rs` is batch-only by design (no LSP), which is all CI and the CLI need — editor diagnostics come from the Svelte extension's own language server, not from this script.
 
@@ -57,6 +61,7 @@ Two things the client scope depends on, both easy to break:
 - The runner is `bun:test` everywhere — engine and client both. There is no second test framework.
 - Engine changes require `bun:test` coverage in `server/engine/*.test.ts`. Pure functions (scoring, masking, words, text) get direct unit tests; `Room` behavior is tested by driving a room with fake deps and asserting on the emitted messages — never by reaching into private state.
 - Anything timing-dependent must go through `deps.now`/`deps.schedule` so tests can advance a fake clock deterministically. Adding a raw `setTimeout`/`Date.now()` inside the engine is a bug. This applies to `RoomManager` too, not just `Room` — both take injected time/randomness.
+- **End-to-end tests live in `e2e/*.e2e.ts` and run under Playwright** (`bun run test:e2e`) — the one deliberate exception to bun:test, because the point is real Chromium, real WebSockets, and one isolated browser context per player. The `.e2e.ts` suffix (not `.test.ts`/`.spec.ts`) is load-bearing: it keeps `bun test` from trying to import Playwright specs. `e2e/playwright.config.ts` builds the client and boots the production shape (one Bun process serving static build + WS, port 3100) via Playwright's `webServer`; every test creates its own room, so the suite parallelizes freely against one server. Tests learn the secret word by reading the drawer's page (or pinning a one-word custom list) — never by reaching into the engine. Watch a run with `bun run test:e2e:headed` (defaults to 200ms slow-mo; `SLOWMO=<ms>` overrides) or `bun run test:e2e:ui`.
 - Client tests live in `src/**/*.test.ts` and also run under `bun:test`. Svelte 5 rune modules (`*.svelte.ts`) are compiler macros, so `bun test` can't import them raw; `test/svelte-preload.ts` (wired via `bunfig.toml`) strips the types and runs Svelte's `compileModule` on import. Logic classes like `GameState` are tested by instantiating them and feeding `ServerMessage`s — no DOM, no component mounting.
 
 ### Coverage is a floor, not a target — do not game it
