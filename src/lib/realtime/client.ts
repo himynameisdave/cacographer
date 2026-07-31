@@ -1,4 +1,4 @@
-import { type ClientMessage, type ServerMessage } from '$lib/protocol';
+import type { ClientMessage, ServerMessage } from '$lib/protocol';
 
 export type SocketStatus = 'connecting' | 'open' | 'closed' | 'reconnecting';
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import  { type Phase } from '$lib/protocol';
+	import type  { Phase } from '$lib/protocol';
 
 	type Props = {
 		masked: string | null;

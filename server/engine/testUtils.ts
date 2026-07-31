@@ -2,12 +2,7 @@
  * Deterministic test harness for the game engine: fake clock, recorded message
  * log, and seeded randomness. Used by room.test.ts.
  */
-import {
-	type ClientMessage,
-	type PlayerId,
-	type ServerMessage,
-	type Settings
-} from '../../src/lib/protocol';
+import type { ClientMessage, PlayerId, ServerMessage, Settings } from '../../src/lib/protocol';
 import { Room, type RoomDeps, type TimerHandle } from './Room';
 
 type Task = {

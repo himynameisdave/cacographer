@@ -2,13 +2,7 @@
  * End-of-game drawing gallery: per-turn drawing snapshots plus like/dislike
  * tallies. Pure functions — the Room owns the state and calls in here.
  */
-import {
-	type DrawOp,
-	type Gallery,
-	type GalleryEntry,
-	type PlayerId,
-	type VoteKind
-} from '../../src/lib/protocol';
+import type { DrawOp, Gallery, GalleryEntry, PlayerId, VoteKind } from '../../src/lib/protocol';
 
 // The Readonly<> wrapper around ReadonlyMap is not redundant: tsgolint's
 // prefer-readonly-parameter-types check only recognizes the outer Readonly<> generic, not the
