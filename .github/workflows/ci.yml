@@ -25,7 +25,7 @@ jobs:
       - name: Format check (oxfmt)
         run: bun run format:check
 
-      - name: Typecheck client (svelte-check, fail on warnings)
+      - name: Typecheck client (svelte-check-rs, fail on warnings)
         run: bun run check
 
       - name: Typecheck server (tsc)

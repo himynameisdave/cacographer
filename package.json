@@ -14,9 +14,9 @@
 		"format": "oxfmt",
 		"format:check": "oxfmt --check",
 		"prepare": "husky || true; svelte-kit sync || echo ''",
-		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
-		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-		"check:server": "node_modules/typescript-7/bin/tsc -p server/tsconfig.json --noEmit"
+		"check": "svelte-kit sync && svelte-check-rs --tsconfig ./tsconfig.json --fail-on-warnings",
+		"check:watch": "svelte-kit sync && svelte-check-rs --tsconfig ./tsconfig.json --watch",
+		"check:server": "tsc -p server/tsconfig.json --noEmit"
 	},
 	"devDependencies": {
 		"@himynameisdave/oxlint-config": "~1.1.0",
@@ -31,10 +31,9 @@
 		"oxlint": "^1.76.0",
 		"oxlint-tsgolint": "^7.0.2001",
 		"svelte": "^5.56.8",
-		"svelte-check": "^4.7.2",
+		"svelte-check-rs": "^0.11.0",
 		"svelte-copyright": "^3.0.0",
-		"typescript": "^6.0.3",
-		"typescript-7": "npm:typescript@^7.0.2",
+		"typescript": "^7.0.2",
 		"vite": "^8.1.4"
 	},
 	"overrides": {
