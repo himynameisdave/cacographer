@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+	<!--
+		Source for static/og.png (the Open Graph share image, 1200×630).
+		It mirrors the landing-page hero: the dictionary entry, set in the same
+		palette (src/app.css) and serif stack as src/routes/+page.svelte.
+
+		Regenerate the PNG after editing:
+			rsvg-convert -w 1200 -h 630 assets/og-image.svg -o static/og.png
+	-->
+	<defs>
+		<linearGradient id="headword" x1="0" y1="0" x2="1" y2="0.35">
+			<stop offset="0.3" stop-color="#fbbf24" />
+			<stop offset="1" stop-color="#f97316" />
+		</linearGradient>
+		<radialGradient id="glow" cx="0.5" cy="-0.1" r="0.9">
+			<stop offset="0" stop-color="#fbbf24" stop-opacity="0.09" />
+			<stop offset="0.6" stop-color="#fbbf24" stop-opacity="0" />
+		</radialGradient>
+	</defs>
+
+	<rect width="1200" height="630" fill="#16161d" />
+	<rect width="1200" height="630" fill="url(#glow)" />
+
+	<!-- The entry card -->
+	<rect x="64" y="64" width="1072" height="502" rx="24" fill="#1b1b24" stroke="#2a2a35" stroke-width="2" />
+
+	<g font-family="Iowan Old Style, Palatino, Georgia, serif">
+		<text x="120" y="212">
+			<tspan font-size="94" font-weight="700" letter-spacing="1" fill="url(#headword)">ca·cog·ra·pher</tspan>
+			<tspan dx="26" font-size="34" fill="#6d6a7e">/kəˈkɒɡ.rə.fər/</tspan>
+		</text>
+
+		<text x="122" y="272" font-size="33" font-style="italic" fill="#9b98ad">noun</text>
+
+		<text x="122" y="352" font-size="40" fill="#9b98ad">
+			<tspan font-weight="700" fill="#ecebf3">1.</tspan>
+			<tspan dx="10">someone who is bad at spelling or handwriting</tspan>
+		</text>
+
+		<text x="122" y="420" font-size="40" fill="#9b98ad">
+			<tspan font-weight="700" fill="#ecebf3">2.</tspan>
+			<tspan dx="8">someone who can draw funny pictures</tspan>
+		</text>
+	</g>
+
+	<line x1="120" y1="468" x2="1080" y2="468" stroke="#2a2a35" stroke-width="2" />
+
+	<text x="122" y="522" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="32">
+		<tspan fill="#fbbf24">▸</tspan>
+		<tspan dx="8" fill="#9b98ad">a drawing &amp; guessing game</tspan>
+	</text>
+</svg>

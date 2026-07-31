@@ -4,6 +4,45 @@
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="text-scale" content="scale" />
+
+		<!-- SEO/sharing tags live here, not in svelte:head: ssr is off, so crawlers and
+		     unfurl bots (Slack) only ever see this static shell. Absolute URLs are
+		     required for og:image/og:url — unfurlers don't resolve relative paths. -->
+		<title>Cacographer</title>
+		<meta
+			name="description"
+			content="cacographer (n.) — someone who can draw funny pictures. A free multiplayer drawing &amp; guessing game. Scribble a secret word, race to guess it."
+		/>
+		<link rel="canonical" href="https://cacographer-production.up.railway.app/" />
+		<meta name="theme-color" content="#16161d" />
+
+		<meta property="og:type" content="website" />
+		<meta property="og:site_name" content="Cacographer" />
+		<meta property="og:title" content="Cacographer" />
+		<meta
+			property="og:description"
+			content="cacographer (n.) — someone who can draw funny pictures. A free multiplayer drawing &amp; guessing game. Scribble a secret word, race to guess it."
+		/>
+		<meta property="og:url" content="https://cacographer-production.up.railway.app/" />
+		<meta property="og:image" content="https://cacographer-production.up.railway.app/og.png" />
+		<meta property="og:image:type" content="image/png" />
+		<meta property="og:image:width" content="1200" />
+		<meta property="og:image:height" content="630" />
+		<meta
+			property="og:image:alt"
+			content="Dictionary entry for cacographer: 1. someone who is bad at spelling or handwriting; 2. someone who can draw funny pictures — a drawing &amp; guessing game."
+		/>
+
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:title" content="Cacographer" />
+		<meta
+			name="twitter:description"
+			content="cacographer (n.) — someone who can draw funny pictures. A free multiplayer drawing &amp; guessing game. Scribble a secret word, race to guess it."
+		/>
+		<meta name="twitter:image" content="https://cacographer-production.up.railway.app/og.png" />
+
+		<link rel="icon" href="/favicon.ico" sizes="32x32" />
+		<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">
