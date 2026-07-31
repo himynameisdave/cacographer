@@ -4,6 +4,9 @@
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="text-scale" content="scale" />
+		<!-- Icons live in app.html, not svelte:head: with ssr off, unfurl bots only see this shell. -->
+		<link rel="icon" href="/favicon.ico" sizes="32x32" />
+		<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">
