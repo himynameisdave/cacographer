@@ -22,7 +22,9 @@
 
 	function commit(key: keyof Settings, e: Event): void {
 		onupdate({ [key]: num(e) });
-		delete pending[key];
+		// Clearing to undefined rather than deleting: shown() reads through `??`, so an own
+		// property holding undefined and a missing one are indistinguishable to every reader.
+		pending[key] = undefined;
 	}
 
 	function shown(key: string, fallback: number): number {

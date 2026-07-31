@@ -30,25 +30,6 @@
 	let paintedLastId = '';
 	let paintedLastPoints = 0;
 
-	$effect(() => {
-		// Register reactive deps explicitly: op count + the tail stroke's point
-		// count (the only op the server ever mutates in place).
-		const count = ops.length;
-		const last = count > 0 ? ops[count - 1] : null;
-		if (last?.kind === 'stroke') {void last.points.length;}
-
-		if (!canvasEl) {return;}
-		if (!ctx) {
-			ctx = canvasEl.getContext('2d');
-			if (!ctx) {return;}
-			fullRepaint();
-			return;
-		}
-
-		if (needsFullRepaint()) {fullRepaint();}
-		else {paintForward();}
-	});
-
 	function needsFullRepaint(): boolean {
 		if (ops.length < paintedOps) {return true;}
 		if (paintedOps === 0) {return false;}
@@ -83,6 +64,25 @@
 		syncPainted();
 	}
 
+	$effect(() => {
+		// Register reactive deps explicitly: op count + the tail stroke's point
+		// count (the only op the server ever mutates in place).
+		const count = ops.length;
+		const last = count > 0 ? ops[count - 1] : null;
+		if (last?.kind === 'stroke') {void last.points.length;}
+
+		if (!canvasEl) {return;}
+		if (!ctx) {
+			ctx = canvasEl.getContext('2d');
+			if (!ctx) {return;}
+			fullRepaint();
+			return;
+		}
+
+		if (needsFullRepaint()) {fullRepaint();}
+		else {paintForward();}
+	});
+
 	// ---- Input ------------------------------------------------------------------
 
 	let drawing = false;
@@ -102,8 +102,9 @@
 		return tool === 'eraser' ? '#ffffff' : color;
 	}
 
-	function toNorm(e: PointerEvent): [number, number] {
-		const rect = canvasEl!.getBoundingClientRect();
+	// Takes the element rather than reading `canvasEl`, so callers do the one null check.
+	function toNorm(el: HTMLCanvasElement, e: PointerEvent): [number, number] {
+		const rect = el.getBoundingClientRect();
 		const x = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
 		const y = Math.min(1, Math.max(0, (e.clientY - rect.top) / rect.height));
 		return [x, y];
@@ -119,7 +120,7 @@
 	function onPointerDown(e: PointerEvent): void {
 		if (!canDraw || !canvasEl || e.button !== 0) {return;}
 		e.preventDefault();
-		const [x, y] = toNorm(e);
+		const [x, y] = toNorm(canvasEl, e);
 		if (tool === 'fill') {
 			onop({ kind: 'fill', id: newId(), x, y, color });
 			return;
@@ -141,13 +142,23 @@
 		flushTimer = setInterval(flush, FLUSH_MS);
 	}
 
-	function onPointerMove(e: PointerEvent): void {
+	function endStroke(): void {
 		if (!drawing) {return;}
+		drawing = false;
+		if (flushTimer !== null) {clearInterval(flushTimer);}
+		flushTimer = null;
+		flush();
+		currentId = '';
+		lastLocal = null;
+	}
+
+	function onPointerMove(e: PointerEvent): void {
+		if (!drawing || !canvasEl) {return;}
 		if (!canDraw) {
 			endStroke();
 			return;
 		}
-		const [x, y] = toNorm(e);
+		const [x, y] = toNorm(canvasEl, e);
 		pending.push([x, y]);
 		if (ctx && lastLocal) {
 			ctx.strokeStyle = strokeColor();
@@ -160,16 +171,6 @@
 			ctx.stroke();
 		}
 		lastLocal = [x, y];
-	}
-
-	function endStroke(): void {
-		if (!drawing) {return;}
-		drawing = false;
-		if (flushTimer !== null) {clearInterval(flushTimer);}
-		flushTimer = null;
-		flush();
-		currentId = '';
-		lastLocal = null;
 	}
 
 	// Lost the pen mid-stroke (turn ended, pointer cancelled, unmount) — flush what we have.

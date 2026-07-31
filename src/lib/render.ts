@@ -13,26 +13,6 @@ const W = CANVAS_WIDTH;
 const H = CANVAS_HEIGHT;
 const FILL_TOLERANCE = 32;
 
-/** Paint one op onto the context. */
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- see module doc comment
-export function paintOp(ctx: CanvasRenderingContext2D, op: DrawOp): void {
-	if (op.kind === 'stroke') {
-		paintStroke(ctx, op, 0);
-	} else {
-		paintFill(ctx, op.x, op.y, op.color);
-	}
-}
-
-/** Repaint a whole op log from scratch: white canvas, then every op in order. */
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- see module doc comment
-export function replayOps(ctx: CanvasRenderingContext2D, ops: readonly DrawOp[]): void {
-	ctx.fillStyle = '#ffffff';
-	ctx.fillRect(0, 0, W, H);
-	for (const op of ops) {
-		paintOp(ctx, op);
-	}
-}
-
 /** Paint a stroke's points from index `from` onward (0 = whole stroke). */
 export function paintStroke(
 	// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- see module doc comment
@@ -114,8 +94,12 @@ function paintFill(ctx: CanvasRenderingContext2D, nx: number, ny: number, fillCo
 	};
 	let guard = W * H * 4; // safety cap on iterations
 	while (stack.length > 0 && guard-- > 0) {
-		const y = stack.pop()!;
-		let x = stack.pop()!;
+		const y = stack.pop();
+		let x = stack.pop();
+		// Seeds are always pushed as x/y pairs, so an odd stack means the loop is done.
+		if (y === undefined || x === undefined) {
+			break;
+		}
 		let i = (y * W + x) * 4;
 		if (!match(i)) {
 			continue;
@@ -142,4 +126,24 @@ function paintFill(ctx: CanvasRenderingContext2D, nx: number, ny: number, fillCo
 		}
 	}
 	ctx.putImageData(img, 0, 0);
+}
+
+/** Paint one op onto the context. */
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- see module doc comment
+export function paintOp(ctx: CanvasRenderingContext2D, op: DrawOp): void {
+	if (op.kind === 'stroke') {
+		paintStroke(ctx, op, 0);
+	} else {
+		paintFill(ctx, op.x, op.y, op.color);
+	}
+}
+
+/** Repaint a whole op log from scratch: white canvas, then every op in order. */
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- see module doc comment
+export function replayOps(ctx: CanvasRenderingContext2D, ops: readonly DrawOp[]): void {
+	ctx.fillStyle = '#ffffff';
+	ctx.fillRect(0, 0, W, H);
+	for (const op of ops) {
+		paintOp(ctx, op);
+	}
 }

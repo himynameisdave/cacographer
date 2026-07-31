@@ -24,6 +24,14 @@
 	/** A never-drawn-on (or cleared) canvas means "no avatar", not a white square. */
 	let hasInk = false;
 
+	function blank(): void {
+		if (!ctx) {
+			return;
+		}
+		ctx.fillStyle = '#ffffff';
+		ctx.fillRect(0, 0, SIZE, SIZE);
+	}
+
 	$effect(() => {
 		if (!canvasEl || ctx) {
 			return;
@@ -43,16 +51,9 @@
 		}
 	});
 
-	function blank(): void {
-		if (!ctx) {
-			return;
-		}
-		ctx.fillStyle = '#ffffff';
-		ctx.fillRect(0, 0, SIZE, SIZE);
-	}
-
-	function toLocal(e: PointerEvent): [number, number] {
-		const rect = canvasEl!.getBoundingClientRect();
+	// Takes the element rather than reading `canvasEl`, so callers do the one null check.
+	function toLocal(el: HTMLCanvasElement, e: PointerEvent): [number, number] {
+		const rect = el.getBoundingClientRect();
 		const x = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
 		const y = Math.min(1, Math.max(0, (e.clientY - rect.top) / rect.height));
 		return [x * SIZE, y * SIZE];
@@ -65,7 +66,7 @@
 		e.preventDefault();
 		canvasEl.setPointerCapture(e.pointerId);
 		drawing = true;
-		last = toLocal(e);
+		last = toLocal(canvasEl, e);
 		ctx.fillStyle = color;
 		ctx.beginPath();
 		ctx.arc(last[0], last[1], BRUSH / 2, 0, Math.PI * 2);
@@ -74,10 +75,10 @@
 	}
 
 	function onPointerMove(e: PointerEvent): void {
-		if (!drawing || !ctx || last === null) {
+		if (!drawing || !ctx || !canvasEl || last === null) {
 			return;
 		}
-		const p = toLocal(e);
+		const p = toLocal(canvasEl, e);
 		ctx.strokeStyle = color;
 		ctx.lineWidth = BRUSH;
 		ctx.lineCap = 'round';
@@ -87,6 +88,13 @@
 		ctx.lineTo(p[0], p[1]);
 		ctx.stroke();
 		last = p;
+	}
+
+	function emit(): void {
+		if (!canvasEl) {
+			return;
+		}
+		onchange(hasInk ? canvasEl.toDataURL('image/png') : null);
 	}
 
 	function endStroke(): void {
@@ -102,13 +110,6 @@
 		blank();
 		hasInk = false;
 		emit();
-	}
-
-	function emit(): void {
-		if (!canvasEl) {
-			return;
-		}
-		onchange(hasInk ? canvasEl.toDataURL('image/png') : null);
 	}
 </script>
 
