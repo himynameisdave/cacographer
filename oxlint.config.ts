@@ -34,6 +34,20 @@ export default defineConfig({
 					}
 				]
 			}
+		},
+		{
+			// The Playwright harness: tests are handed live class instances (Page,
+			// BrowserContext, Locator, Browser…) whose members are inherently mutable —
+			// the same shape as the Socket exemption above, but across so many fixture
+			// types that an allow-list would just mirror Playwright's public API. Spec
+			// code also casts small JSON payloads from the server it is itself testing
+			// (`/api/rooms`), where a runtime validator would duplicate the assertions
+			// the test is about to make anyway.
+			files: ['e2e/**'],
+			rules: {
+				'typescript/prefer-readonly-parameter-types': 'off',
+				'typescript/no-unsafe-type-assertion': 'off'
+			}
 		}
 	]
 });

@@ -4,4 +4,5 @@ bunx lint-staged
 # so they check each project as a whole rather than going through lint-staged. ~0.8s combined —
 # `check` was CI-only while it ran svelte-check; svelte-check-rs made it cheap enough to commit on.
 bun run check:server
+bun run check:e2e
 bun run check

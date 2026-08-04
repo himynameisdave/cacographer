@@ -10,16 +10,21 @@
 		"test": "bun test",
 		"test:server": "bun test server",
 		"test:client": "bun test src",
+		"test:e2e": "playwright test -c e2e/playwright.config.ts",
+		"test:e2e:headed": "playwright test -c e2e/playwright.config.ts --headed --workers=1",
+		"test:e2e:ui": "playwright test -c e2e/playwright.config.ts --ui",
 		"lint": "oxlint -c oxlint.config.ts --deny-warnings --type-aware",
 		"format": "oxfmt",
 		"format:check": "oxfmt --check",
 		"prepare": "husky || true; svelte-kit sync || echo ''",
 		"check": "svelte-kit sync && svelte-check-rs --tsconfig ./tsconfig.json --fail-on-warnings",
 		"check:watch": "svelte-kit sync && svelte-check-rs --tsconfig ./tsconfig.json --watch",
-		"check:server": "tsc -p server/tsconfig.json --noEmit"
+		"check:server": "tsc -p server/tsconfig.json --noEmit",
+		"check:e2e": "tsc -p e2e/tsconfig.json --noEmit"
 	},
 	"devDependencies": {
 		"@himynameisdave/oxlint-config": "~1.1.0",
+		"@playwright/test": "^1.62.1",
 		"@sveltejs/adapter-static": "^3.0.10",
 		"@sveltejs/kit": "^2.69.3",
 		"@sveltejs/vite-plugin-svelte": "^7.2.0",
