@@ -23,7 +23,7 @@ To read more on the product and technical scope of this project, please read:
 
 ## Getting started
 
-Requires [Bun](https://bun.sh) (no other runtime is used, on either client or server).
+Requires [Bun](https://bun.sh) **1.4 or newer** (no other runtime is used, on either client or server). The floor is declared in `package.json`'s `engines.bun`; Bun itself doesn't enforce that field, so check `bun --version` and `bun upgrade` if you're behind — CI and the Dockerfile pin to it.
 
 ```sh
 bun install

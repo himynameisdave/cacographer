@@ -2,6 +2,8 @@
 
 A Skribbl-clone drawing/guessing game. Product scope: `docs/PRD.md`. Architecture: `docs/TRD.md`. Read both before making non-trivial changes.
 
+**Bun ≥ 1.4 is required.** The floor lives in `package.json`'s `engines.bun`; Bun doesn't enforce that field itself, so CI's `setup-bun` and the Dockerfile's `oven/bun` pins are what hold it — keep all three in sync when raising it.
+
 ## Commands
 
 ```sh

@@ -3,6 +3,9 @@
 	"version": "0.0.1",
 	"private": true,
 	"type": "module",
+	"engines": {
+		"bun": ">=1.4.0"
+	},
 	"scripts": {
 		"dev": "concurrently -k -n game,web -c blue,magenta \"bun --watch server/index.ts\" \"vite dev\"",
 		"build": "vite build",
