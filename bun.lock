@@ -5,7 +5,7 @@
     "": {
       "name": "cacographer",
       "devDependencies": {
-        "@himynameisdave/oxlint-config": "~1.1.0",
+        "@himynameisdave/oxlint-config": "~1.2.0",
         "@playwright/test": "^1.62.1",
         "@sveltejs/adapter-static": "^3.0.10",
         "@sveltejs/kit": "^2.70.2",
@@ -29,7 +29,7 @@
     "cookie": "^0.7.0",
   },
   "packages": {
-    "@himynameisdave/oxlint-config": ["@himynameisdave/oxlint-config@1.1.0", "", { "peerDependencies": { "oxlint": ">=1.76.0 <2", "oxlint-tsgolint": ">=7.0.2001" }, "optionalPeers": ["oxlint-tsgolint"] }, "sha512-MvaYZWr3wjpTSlHuNxT46Sq5rKxQ3R616wWGEy9vnENbroMNywDhe7Af7windpwY6ejcHTVBJlpPxStBok90tg=="],
+    "@himynameisdave/oxlint-config": ["@himynameisdave/oxlint-config@1.2.0", "", { "peerDependencies": { "oxlint": ">=1.78.0 <2", "oxlint-tsgolint": ">=7.0.2001" }, "optionalPeers": ["oxlint-tsgolint"] }, "sha512-QG7wb0jcmjUx4bSsYQ1XwPP9qQcvNHC9jjJ/Ix8yuz08OW9WhAQNcU0JrOXAy7nFhPGHDjSdBL3AGTXAAxG5ug=="],
 
     "@jridgewell/gen-mapping": ["@jridgewell/gen-mapping@0.3.13", "", { "dependencies": { "@jridgewell/sourcemap-codec": "^1.5.0", "@jridgewell/trace-mapping": "^0.3.24" } }, "sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA=="],
 
