@@ -12,9 +12,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # Resolves to the newest Bun satisfying the repo floor (engines.bun in package.json).
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: '>=1.4.0'
 
       - name: Install
         run: bun install --frozen-lockfile
@@ -46,9 +47,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # Resolves to the newest Bun satisfying the repo floor (engines.bun in package.json).
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: '>=1.4.0'
 
       - name: Install
         run: bun install --frozen-lockfile

@@ -1,7 +1,7 @@
-# Pin the Bun version this repo develops against (bun --version → 1.3.13).
+# Pin a Bun version satisfying the repo floor (engines.bun in package.json: >=1.4.0).
 # Railway auto-detects a Dockerfile and uses it instead of Nixpacks, which
 # removes the Bun-vs-Node lockfile guessing that bun.lock alone can trip on.
-FROM oven/bun:1.3.13 AS build
+FROM oven/bun:1.4.0 AS build
 WORKDIR /app
 
 # Install deps against the committed lockfile (devDeps included — the build needs Vite/SvelteKit).
@@ -13,7 +13,7 @@ COPY . .
 RUN bun run build
 
 # --- Lean runtime image: the server is Bun/Node built-ins only, so it needs no node_modules. ---
-FROM oven/bun:1.3.13-slim AS runtime
+FROM oven/bun:1.4.0-slim AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 
