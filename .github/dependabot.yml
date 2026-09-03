@@ -9,3 +9,12 @@ updates:
     directory: '/' # Location of package manifests
     schedule:
       interval: 'weekly'
+    groups:
+      oxlint:
+        patterns:
+          - 'oxlint'
+          - '@himynameisdave/oxlint-config'
+      oxfmt:
+        patterns:
+          - 'oxfmt'
+          - '@himynameisdave/oxfmt-config'
