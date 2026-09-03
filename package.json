@@ -23,7 +23,7 @@
 		"check:e2e": "tsc -p e2e/tsconfig.json --noEmit"
 	},
 	"devDependencies": {
-		"@himynameisdave/oxlint-config": "~1.1.0",
+		"@himynameisdave/oxlint-config": "~1.2.0",
 		"@playwright/test": "^1.62.1",
 		"@sveltejs/adapter-static": "^3.0.10",
 		"@sveltejs/kit": "^2.70.3",
@@ -33,7 +33,7 @@
 		"husky": "^9.1.7",
 		"lint-staged": "^17.3.0",
 		"oxfmt": "^0.64.0",
-		"oxlint": "^1.78.0",
+		"oxlint": "^1.80.0",
 		"oxlint-tsgolint": "^7.0.2001",
 		"svelte": "^5.56.10",
 		"svelte-check-rs": "^0.11.0",
