@@ -754,10 +754,11 @@ export class Room {
 			return;
 		}
 
-		// A wrong guess that *contains* the answer would spoil it — keep it in
-		// the post-guess channel instead of broadcasting.
+		// A wrong guess that *contains* the answer would spoil it for the other
+		// players still guessing — echo it back to its author alone. It is still
+		// a wrong guess: they keep their turn open and go again.
 		if (guess.includes(word)) {
-			this.moderatedChat(player, text, 'guessed');
+			this.moderatedChat(player, text, 'guessed', player.id);
 			return;
 		}
 
@@ -827,7 +828,12 @@ export class Room {
 	 * this path (they are announced via system chat), so neither rule can eat
 	 * a legitimate guess.
 	 */
-	private moderatedChat(player: Readonly<ServerPlayer>, text: string, scope: ChatScope): void {
+	private moderatedChat(
+		player: Readonly<ServerPlayer>,
+		text: string,
+		scope: ChatScope,
+		onlyTo: PlayerId | null = null
+	): void {
 		if (!this.allowRepeat(player.id, normalize(text))) {
 			this.sendError(
 				player.id,
@@ -837,16 +843,19 @@ export class Room {
 			return;
 		}
 		if (hasProfanity(text, this.filterExemptWord())) {
-			this.sendChat({
-				id: player.id,
-				name: player.name,
-				text: pottyPhrase(this.deps.random),
-				scope,
-				filtered: true
-			});
+			this.sendChat(
+				{
+					id: player.id,
+					name: player.name,
+					text: pottyPhrase(this.deps.random),
+					scope,
+					filtered: true
+				},
+				onlyTo
+			);
 			return;
 		}
-		this.sendChat({ id: player.id, name: player.name, text, scope });
+		this.sendChat({ id: player.id, name: player.name, text, scope }, onlyTo);
 	}
 
 	private checkAllGuessed(): void {
@@ -1167,8 +1176,14 @@ export class Room {
 		return out;
 	}
 
-	private sendChat(entry: ChatEntry): void {
+	/** `onlyTo` narrows delivery to a single player, for chat that must not reach
+	 * even the drawer — a not-yet-guessed player's spoiler-adjacent guess. */
+	private sendChat(entry: ChatEntry, onlyTo: PlayerId | null = null): void {
 		const msg: ServerMessage = { type: 'chat', entry };
+		if (onlyTo !== null) {
+			this.deps.send(onlyTo, msg);
+			return;
+		}
 		if (entry.scope === 'guessed' && this.turn) {
 			for (const p of this.players.values()) {
 				if (!p.connected) {
