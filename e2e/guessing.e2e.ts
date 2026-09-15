@@ -11,7 +11,7 @@ import {
 test('an almost-right guess whispers "So close!" privately', async ({ request, joinPlayers }) => {
 	const code = await createRoom(request);
 	const players = await joinPlayers(code, 'Alice', 'Bob', 'Carol');
-	const { guessers, word } = await startDrawingTurn(players);
+	const { drawer, guessers, word } = await startDrawingTurn(players);
 	const [g1, g2] = guessers;
 	if (g1 === undefined || g2 === undefined) {
 		throw new Error('setup failed');
@@ -21,11 +21,36 @@ test('an almost-right guess whispers "So close!" privately', async ({ request, j
 	const near = `${word.slice(0, -1)}q`;
 	await sendChat(g1.page, near);
 	await expect(g1.page.getByText('So close!')).toBeVisible();
-	// The near-miss itself is public chatter, but the nudge is private.
-	await expect(g2.page.locator('.msg', { hasText: near })).toBeVisible();
+	// A typo of the answer all but spells it out, so it stays with its author —
+	// who sees it in the locked channel — and the nudge is theirs alone.
+	await expect(g1.page.locator('.msg.guessed', { hasText: near })).toBeVisible();
+	await expect(g2.page.locator('.messages')).not.toContainText(near);
+	await expect(drawer.page.locator('.messages')).not.toContainText(near);
 	await expect(g2.page.getByText('So close!')).not.toBeVisible();
 	// Close is not correct.
 	await expect(rosterRow(g1.page, `${g1.name}(you)`).locator('.check')).toHaveCount(0);
+});
+
+test('a guess nowhere near the answer is still public chatter', async ({
+	request,
+	joinPlayers
+}) => {
+	const code = await createRoom(request);
+	const players = await joinPlayers(code, 'Alice', 'Bob', 'Carol');
+	const { drawer, guessers } = await startDrawingTurn(players);
+	const [g1, g2] = guessers;
+	if (g1 === undefined || g2 === undefined) {
+		throw new Error('setup failed');
+	}
+
+	// Hiding near-misses must not swallow ordinary wrong guesses.
+	await sendChat(g1.page, 'xylophone');
+	await Promise.all(
+		[g1, g2, drawer].map(async (p) =>
+			expect(p.page.locator('.msg', { hasText: 'xylophone' })).toBeVisible()
+		)
+	);
+	await expect(g1.page.getByText('So close!')).not.toBeVisible();
 });
 
 test('a wrong guess containing the answer echoes to its author alone', async ({
