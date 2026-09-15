@@ -11,17 +11,39 @@ type Note = { freq: number; at: number; dur: number };
  */
 export function notesFor(msg: ServerMessage, you: PlayerId | null): readonly Note[] {
 	switch (msg.type) {
-		case 'playerJoined':
-			return [{ freq: 660, at: 0, dur: 0.07 }, { freq: 880, at: 0.07, dur: 0.09 }];
-		case 'playerLeft':
-			return [{ freq: 440, at: 0, dur: 0.07 }, { freq: 330, at: 0.07, dur: 0.09 }];
-		case 'wordChoices':
-			return [{ freq: 784, at: 0, dur: 0.1 }, { freq: 1047, at: 0.12, dur: 0.14 }];
-		case 'drawingStarted':
-			return [{ freq: 523, at: 0, dur: 0.09 }, { freq: 784, at: 0.1, dur: 0.13 }];
-		case 'letterRevealed':
+		case 'playerJoined': {
+			return [
+				{ freq: 660, at: 0, dur: 0.07 },
+				{ freq: 880, at: 0.07, dur: 0.09 }
+			];
+		}
+
+		case 'playerLeft': {
+			return [
+				{ freq: 440, at: 0, dur: 0.07 },
+				{ freq: 330, at: 0.07, dur: 0.09 }
+			];
+		}
+
+		case 'wordChoices': {
+			return [
+				{ freq: 784, at: 0, dur: 0.1 },
+				{ freq: 1047, at: 0.12, dur: 0.14 }
+			];
+		}
+
+		case 'drawingStarted': {
+			return [
+				{ freq: 523, at: 0, dur: 0.09 },
+				{ freq: 784, at: 0.1, dur: 0.13 }
+			];
+		}
+
+		case 'letterRevealed': {
 			return [{ freq: 1319, at: 0, dur: 0.04 }];
-		case 'guessResult':
+		}
+
+		case 'guessResult': {
 			if (msg.correct) {
 				return [
 					{ freq: 659, at: 0, dur: 0.08 },
@@ -30,22 +52,50 @@ export function notesFor(msg: ServerMessage, you: PlayerId | null): readonly Not
 				];
 			}
 			return msg.close === true ? [{ freq: 233, at: 0, dur: 0.16 }] : [];
-		case 'playerGuessed':
+		}
+
+		case 'playerGuessed': {
 			// The guesser already heard their own fanfare from `guessResult`.
 			return msg.id === you ? [] : [{ freq: 988, at: 0, dur: 0.07 }];
-		case 'turnEnded':
-			return [{ freq: 587, at: 0, dur: 0.1 }, { freq: 392, at: 0.11, dur: 0.2 }];
-		case 'gameEnded':
+		}
+
+		case 'turnEnded': {
+			return [
+				{ freq: 587, at: 0, dur: 0.1 },
+				{ freq: 392, at: 0.11, dur: 0.2 }
+			];
+		}
+
+		case 'gameEnded': {
 			return [
 				{ freq: 523, at: 0, dur: 0.1 },
 				{ freq: 659, at: 0.11, dur: 0.1 },
 				{ freq: 784, at: 0.22, dur: 0.1 },
 				{ freq: 1047, at: 0.33, dur: 0.3 }
 			];
-		case 'error':
+		}
+
+		case 'error': {
 			return [{ freq: 196, at: 0, dur: 0.2 }];
-		default:
+		}
+
+		// Silent on purpose: draw ops and resyncs are far too frequent to sonify,
+		// and the rest are either invisible bookkeeping or already covered by the
+		// phase change that accompanies them.
+		case 'joined':
+		case 'roomState':
+		case 'playerConnection':
+		case 'hostChanged':
+		case 'turnStarted':
+		case 'yourWord':
+		case 'draw':
+		case 'clearCanvas':
+		case 'canvasState':
+		case 'chat':
+		case 'timeSync':
+		case 'voteUpdate': {
 			return [];
+		}
 	}
 }
 
