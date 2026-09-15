@@ -28,7 +28,7 @@ test('an almost-right guess whispers "So close!" privately', async ({ request, j
 	await expect(rosterRow(g1.page, `${g1.name}(you)`).locator('.check')).toHaveCount(0);
 });
 
-test('a wrong guess containing the answer is quarantined, not broadcast', async ({
+test('a wrong guess containing the answer echoes to its author alone', async ({
 	request,
 	joinPlayers
 }) => {
@@ -42,9 +42,13 @@ test('a wrong guess containing the answer is quarantined, not broadcast', async 
 
 	const spoiler = `${word} maybe`;
 	await sendChat(g1.page, spoiler);
-	// The drawer sees it in the locked channel; the other guesser never does.
-	await expect(drawer.page.locator('.msg.guessed', { hasText: spoiler })).toBeVisible();
+	// Its author sees their own failed guess, marked as unbroadcast...
+	await expect(g1.page.locator('.msg.guessed', { hasText: spoiler })).toBeVisible();
+	// ...and nobody else does — not the other guesser, not even the drawer.
 	await expect(g2.page.locator('.messages')).not.toContainText(word);
+	await expect(drawer.page.locator('.messages')).not.toContainText(spoiler);
+	// It was not scored: the guesser has no check in the roster.
+	await expect(rosterRow(g1.page, `${g1.name}(you)`).locator('.check')).toHaveCount(0);
 });
 
 test('post-guess chatter stays in the guessed-only channel', async ({ request, joinPlayers }) => {
