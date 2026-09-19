@@ -450,26 +450,45 @@ describe('guessing', () => {
 		h.send(c, { type: 'guess', text: `${word} pie maybe` }); // contains word
 		h.send(a, { type: 'chat', text: `yes ${word}` }); // drawer → guessed-scope
 
-		for (const entry of h.chatsTo(c)) {
+		// c's own spoiler-adjacent guess echoes back to c; nothing authored by
+		// anyone else may carry the word to a player still guessing.
+		for (const entry of h.chatsTo(c).filter((e) => e.id !== c)) {
 			expect(entry.text.toLowerCase()).not.toContain(word);
 		}
 		// Sanity: guessed-side players did see follow-up chatter.
 		expect(h.chatsTo(a).some((e) => e.text.includes(word))).toBe(true);
 	});
 
-	test('a wrong guess containing the word routes to the guessed scope', () => {
+	test('a wrong guess containing the word echoes to its author alone', () => {
 		const { h, a, b, c, word } = drawingTrio();
 		h.send(c, { type: 'guess', text: `${word} pie` });
 
-		const toDrawer = h.chatsTo(a);
-		expect(toDrawer).toHaveLength(1);
-		expect(toDrawer[0]).toEqual({ id: c, name: 'Cara', text: `${word} pie`, scope: 'guessed' });
-		// Non-guessed players (including the sender) do not receive it.
+		// The sender sees their own failed guess...
+		expect(h.chatsTo(c)).toEqual([{ id: c, name: 'Cara', text: `${word} pie`, scope: 'guessed' }]);
+		// ...and nobody else does — not the other guesser, not even the drawer,
+		// who would otherwise watch a non-guesser's traffic in the guessed channel.
 		expect(h.chatsTo(b)).toHaveLength(0);
-		expect(h.chatsTo(c)).toHaveLength(0);
+		expect(h.chatsTo(a)).toHaveLength(0);
 		// And it did not count as correct.
 		expect(h.typeTo(c, 'guessResult')).toHaveLength(0);
 		expect(h.room.players.get(c)!.guessedThisTurn).toBe(false);
+	});
+
+	test('after a spoiler-adjacent guess the player keeps guessing normally', () => {
+		const { h, a, b, c, word } = drawingTrio();
+		h.send(c, { type: 'guess', text: `${word} pie` });
+		h.clear();
+
+		// A plain wrong guess still broadcasts to everyone...
+		h.send(c, { type: 'guess', text: 'zebra' });
+		for (const id of [a, b, c]) {
+			expect(h.chatsTo(id)).toEqual([{ id: c, name: 'Cara', text: 'zebra', scope: 'all' }]);
+		}
+		// ...and the real word still scores.
+		h.clear();
+		h.send(c, { type: 'guess', text: word });
+		expect(h.typeTo(c, 'guessResult')).toEqual([{ type: 'guessResult', correct: true }]);
+		expect(h.room.players.get(c)!.guessedThisTurn).toBe(true);
 	});
 
 	test('close guess (levenshtein 1): private close hint plus normal broadcast', () => {
