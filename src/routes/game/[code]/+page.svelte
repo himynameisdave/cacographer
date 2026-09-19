@@ -5,6 +5,7 @@
 	import { GameSocket } from '$lib/realtime/client';
 	import { wsUrl } from '$lib/realtime/urls';
 	import { GameState } from '$lib/game.svelte';
+	import { isMuted, play, toggleMute } from '$lib/sound';
 	import AvatarEditor from '$lib/components/AvatarEditor.svelte';
 	import Canvas from '$lib/components/Canvas.svelte';
 	import Chat from '$lib/components/Chat.svelte';
@@ -37,6 +38,7 @@
 	const code = $derived((page.params.code ?? '').toUpperCase());
 
 	const gs = new GameState();
+	let muted = $state(isMuted());
 	let socket: GameSocket | null = null;
 	// The profile we (re)join with; not reactive on purpose.
 	let joinName = '';
@@ -106,6 +108,7 @@
 		const ws = new GameSocket(wsUrl(), {
 			onMessage: (msg) => {
 				gs.apply(msg);
+				play(msg, gs.you);
 				// Join failures make the server close the socket — don't fight it
 				// with reconnect attempts that would just fail the same way.
 				if (gs.fatalError) {ws.close();}
@@ -320,6 +323,15 @@
 						<span class="topbar-note">Final results</span>
 					{/if}
 					<Timer endsAt={room.phase === 'finished' ? null : (gs.choices?.endsAt ?? room.endsAt)} />
+					<button
+						type="button"
+						class="mute"
+						aria-pressed={muted}
+						title={muted ? 'Unmute sound' : 'Mute sound'}
+						onclick={() => {muted = toggleMute();}}
+					>
+						{muted ? '🔇' : '🔊'}
+					</button>
 				</div>
 
 				<div class="board">
@@ -704,6 +716,15 @@
 		gap: 1rem;
 		padding: 0.6rem 1rem;
 		min-height: 3.2rem;
+	}
+
+	.mute {
+		background: none;
+		border: none;
+		cursor: pointer;
+		font-size: 1.1rem;
+		line-height: 1;
+		padding: 0.2rem;
 	}
 
 	.topbar-note {
