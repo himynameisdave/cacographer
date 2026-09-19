@@ -9,6 +9,7 @@ import {
 import { POTTY_PHRASES } from './moderation';
 import {
 	CHOOSE_MS,
+	CLOSE_DISTANCE,
 	GRACE_MS,
 	REDO_LIMIT,
 	REPEAT_LIMIT,
@@ -17,6 +18,7 @@ import {
 	SYNC_MS,
 	YOURE_GONNA_HAVE_TO_BE_FASTER_THAN_THAT_MS
 } from './Room';
+import { levenshtein } from './text';
 import { Harness, WORDS, chooseWord, choicesFor, startedGame } from './testUtils';
 
 const DRAW_MS = DEFAULT_SETTINGS.drawTimeSeconds * 1000; // 80_000
@@ -491,7 +493,7 @@ describe('guessing', () => {
 		expect(h.room.players.get(c)!.guessedThisTurn).toBe(true);
 	});
 
-	test('close guess (levenshtein 1): private close hint plus normal broadcast', () => {
+	test('close guess (levenshtein 1): private close hint, echoed to its author alone', () => {
 		const { h, a, b, c, word } = drawingTrio();
 		const close = word.replace('pp', 'p'); // 'aple' — distance 1, does not contain the word
 		h.send(b, { type: 'guess', text: close });
@@ -500,12 +502,24 @@ describe('guessing', () => {
 			{ type: 'guessResult', correct: false, close: true }
 		]);
 		expect(h.typeTo(a, 'guessResult')).toHaveLength(0);
+		// A typo of the answer spells the answer out — only its author sees it.
+		expect(h.chatsTo(b)).toEqual([{ id: b, name: 'Bob', text: close, scope: 'guessed' }]);
+		expect(h.chatsTo(a)).toHaveLength(0);
+		expect(h.chatsTo(c)).toHaveLength(0);
+		// And it did not count as correct.
+		expect(h.room.players.get(b)!.guessedThisTurn).toBe(false);
+	});
+
+	test('a guess further than CLOSE_DISTANCE still broadcasts to everyone', () => {
+		const { h, a, b, c, word } = drawingTrio();
+		const far = `${word.slice(0, 2)}xxxx`; // 'apxxxx' — distance 4 from 'apple'
+		expect(levenshtein(far, word)).toBeGreaterThan(CLOSE_DISTANCE);
+		h.send(b, { type: 'guess', text: far });
+
 		for (const id of [a, b, c]) {
-			const chats = h.chatsTo(id);
-			expect(chats).toHaveLength(1);
-			expect(chats[0]!.scope).toBe('all');
-			expect(chats[0]!.text).toBe(close);
+			expect(h.chatsTo(id)).toEqual([{ id: b, name: 'Bob', text: far, scope: 'all' }]);
 		}
+		expect(h.typeTo(b, 'guessResult')).toHaveLength(0);
 	});
 
 	test('normalization: guess matches despite case and extra whitespace', () => {

@@ -38,6 +38,11 @@ export const GRACE_MS = 60_000; // disconnected player keeps slot/score this lon
 export const YOURE_GONNA_HAVE_TO_BE_FASTER_THAN_THAT_MS = 1000;
 export const SYNC_MS = 5000;
 export const REPEAT_LIMIT = 20; // sends of the same message before further repeats are blocked
+/** Edit distance at or under which a wrong guess counts as a near-miss: the guesser gets a
+ * private "so close" hint, and the guess is kept off the public feed so a typo of the answer
+ * doesn't hand it to everyone reading. Raising this hides more chatter — it is a secrecy knob,
+ * not just a UX one. */
+export const CLOSE_DISTANCE = 1;
 const REPEAT_TRACKED_MAX = 500; // distinct messages tracked per player, to bound memory
 
 /**
@@ -762,8 +767,13 @@ export class Room {
 			return;
 		}
 
-		if (levenshtein(guess, word) === 1) {
+		// A near-miss spells the answer out to anyone reading — 'aple' gives away
+		// 'apple'. Same treatment as a guess that contains it: private hint to the
+		// guesser, echo to them alone, still wrong so they go again.
+		if (levenshtein(guess, word) <= CLOSE_DISTANCE) {
 			this.deps.send(playerId, { type: 'guessResult', correct: false, close: true });
+			this.moderatedChat(player, text, 'guessed', player.id);
+			return;
 		}
 		this.moderatedChat(player, text, 'all');
 	}
