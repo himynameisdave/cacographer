@@ -17,10 +17,10 @@
 		"format": "oxfmt",
 		"format:check": "oxfmt --check",
 		"prepare": "husky || true; svelte-kit sync || echo ''",
-		"check": "svelte-kit sync && svelte-check-rs --tsconfig ./tsconfig.json --fail-on-warnings",
-		"check:watch": "svelte-kit sync && svelte-check-rs --tsconfig ./tsconfig.json --watch",
-		"check:server": "tsc -p server/tsconfig.json --noEmit",
-		"check:e2e": "tsc -p e2e/tsconfig.json --noEmit"
+		"check": "svelte-kit sync && bun scripts/check.ts",
+		"check:watch": "svelte-kit sync && bun scripts/check.ts --watch",
+		"check:server": "node_modules/@typescript/native/bin/tsc -p server/tsconfig.json --noEmit",
+		"check:e2e": "node_modules/@typescript/native/bin/tsc -p e2e/tsconfig.json --noEmit"
 	},
 	"devDependencies": {
 		"@himynameisdave/oxlint-config": "~1.2.0",
@@ -29,6 +29,7 @@
 		"@sveltejs/kit": "^2.70.3",
 		"@sveltejs/vite-plugin-svelte": "^7.3.0",
 		"@types/bun": "^1.4.0",
+		"@typescript/native": "npm:typescript@^7.0.2",
 		"concurrently": "^10.0.5",
 		"husky": "^9.1.7",
 		"lint-staged": "^17.4.1",
@@ -36,9 +37,9 @@
 		"oxlint": "^1.81.0",
 		"oxlint-tsgolint": "^7.0.2001",
 		"svelte": "^5.57.0",
-		"svelte-check-rs": "^0.11.0",
+		"svelte-check": "^4.7.6",
 		"svelte-copyright": "^3.0.0",
-		"typescript": "^7.0.2",
+		"typescript": "~6",
 		"vite": "^8.2.2"
 	},
 	"overrides": {
