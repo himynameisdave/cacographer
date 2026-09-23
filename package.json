@@ -17,8 +17,8 @@
 		"format": "oxfmt",
 		"format:check": "oxfmt --check",
 		"prepare": "husky || true; svelte-kit sync || echo ''",
-		"check": "svelte-kit sync && svelte-check --tsgo --tsconfig ./tsconfig.json --fail-on-warnings",
-		"check:watch": "svelte-kit sync && svelte-check --tsgo --tsconfig ./tsconfig.json --watch",
+		"check": "svelte-kit sync && bun scripts/check.ts",
+		"check:watch": "svelte-kit sync && bun scripts/check.ts --watch",
 		"check:server": "node_modules/@typescript/native/bin/tsc -p server/tsconfig.json --noEmit",
 		"check:e2e": "node_modules/@typescript/native/bin/tsc -p e2e/tsconfig.json --noEmit"
 	},

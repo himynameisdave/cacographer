@@ -2,7 +2,7 @@ bunx lint-staged
 
 # Both of these type-check a whole program and refuse to run if also handed individual filenames,
 # so they check each project as a whole rather than going through lint-staged. ~0.8s combined —
-# `check` was CI-only while svelte-check ran on TS 6; `--tsgo` keeps it cheap enough to commit on.
+# `check` was CI-only while svelte-check ran on TS 6; tsgo keeps it cheap enough to commit on.
 bun run check:server
 bun run check:e2e
 bun run check
