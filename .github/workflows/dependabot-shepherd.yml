@@ -1,6 +1,8 @@
-name: Dependabot shepherd
+name: Dependabot Shepherd
 
 on:
+  schedule:
+    - cron: '10 16 * * *' # Daily at 08:10 PST (UTC-8).
   workflow_dispatch:
 
 permissions:
@@ -14,7 +16,8 @@ jobs:
   shepherd:
     uses: himynameisdave/depbot-shepherd/.github/workflows/shepherd.yml@main
     with:
-      # Initial rollout: review and report without comments, rebases, or merges.
-      dry-run: true
+      dry-run: false
+      model: gpt-6-luna
+      reasoning-effort: medium
     secrets:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
