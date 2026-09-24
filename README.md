@@ -77,6 +77,16 @@ bun test server       # engine unit tests
 bun run build         # static client → build/
 ```
 
+## Dependabot review dry runs
+
+[depbot-shepherd](https://github.com/himynameisdave/depbot-shepherd) reviews eligible Dependabot PRs through the manual **Dependabot shepherd** workflow. The initial rollout fixes `dry-run: true`: it reports results without commenting, requesting rebases, or merging PRs. There is no schedule.
+
+1. Add `OPENAI_API_KEY` under **Settings → Secrets and variables → Actions** as a repository secret. Reviews use OpenAI API credits, including dry runs.
+2. Once the workflow is merged into `main`, open **Actions → Dependabot shepherd → Run workflow** and select `main`.
+3. Read the job summaries (the **report** job combines results when eligible PRs exist). PRs needing a rebase are skipped during dry runs.
+
+The workflow follows upstream `main`. Automatic merging requires a separate configuration change; see the upstream setup guide before enabling it.
+
 ## Production
 
 ```sh
