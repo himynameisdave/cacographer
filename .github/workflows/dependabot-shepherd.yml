@@ -1,0 +1,20 @@
+name: Dependabot shepherd
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: read
+  statuses: read
+  actions: read
+
+jobs:
+  shepherd:
+    uses: himynameisdave/depbot-shepherd/.github/workflows/shepherd.yml@main
+    with:
+      # Initial rollout: review and report without comments, rebases, or merges.
+      dry-run: true
+    secrets:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
