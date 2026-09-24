@@ -38,6 +38,11 @@ export const GRACE_MS = 60_000; // disconnected player keeps slot/score this lon
 export const YOURE_GONNA_HAVE_TO_BE_FASTER_THAN_THAT_MS = 1000;
 export const SYNC_MS = 5000;
 export const REPEAT_LIMIT = 20; // sends of the same message before further repeats are blocked
+/** Edit distance at or under which a wrong guess counts as a near-miss: the guesser gets a
+ * private "so close" hint, and the guess is kept off the public feed so a typo of the answer
+ * doesn't hand it to everyone reading. Raising this hides more chatter — it is a secrecy knob,
+ * not just a UX one. */
+export const CLOSE_DISTANCE = 1;
 const REPEAT_TRACKED_MAX = 500; // distinct messages tracked per player, to bound memory
 
 /**
@@ -754,15 +759,21 @@ export class Room {
 			return;
 		}
 
-		// A wrong guess that *contains* the answer would spoil it — keep it in
-		// the post-guess channel instead of broadcasting.
+		// A wrong guess that *contains* the answer would spoil it for the other
+		// players still guessing — echo it back to its author alone. It is still
+		// a wrong guess: they keep their turn open and go again.
 		if (guess.includes(word)) {
-			this.moderatedChat(player, text, 'guessed');
+			this.moderatedChat(player, text, 'guessed', player.id);
 			return;
 		}
 
-		if (levenshtein(guess, word) === 1) {
+		// A near-miss spells the answer out to anyone reading — 'aple' gives away
+		// 'apple'. Same treatment as a guess that contains it: private hint to the
+		// guesser, echo to them alone, still wrong so they go again.
+		if (levenshtein(guess, word) <= CLOSE_DISTANCE) {
 			this.deps.send(playerId, { type: 'guessResult', correct: false, close: true });
+			this.moderatedChat(player, text, 'guessed', player.id);
+			return;
 		}
 		this.moderatedChat(player, text, 'all');
 	}
@@ -827,7 +838,12 @@ export class Room {
 	 * this path (they are announced via system chat), so neither rule can eat
 	 * a legitimate guess.
 	 */
-	private moderatedChat(player: Readonly<ServerPlayer>, text: string, scope: ChatScope): void {
+	private moderatedChat(
+		player: Readonly<ServerPlayer>,
+		text: string,
+		scope: ChatScope,
+		onlyTo: PlayerId | null = null
+	): void {
 		if (!this.allowRepeat(player.id, normalize(text))) {
 			this.sendError(
 				player.id,
@@ -837,16 +853,19 @@ export class Room {
 			return;
 		}
 		if (hasProfanity(text, this.filterExemptWord())) {
-			this.sendChat({
-				id: player.id,
-				name: player.name,
-				text: pottyPhrase(this.deps.random),
-				scope,
-				filtered: true
-			});
+			this.sendChat(
+				{
+					id: player.id,
+					name: player.name,
+					text: pottyPhrase(this.deps.random),
+					scope,
+					filtered: true
+				},
+				onlyTo
+			);
 			return;
 		}
-		this.sendChat({ id: player.id, name: player.name, text, scope });
+		this.sendChat({ id: player.id, name: player.name, text, scope }, onlyTo);
 	}
 
 	private checkAllGuessed(): void {
@@ -1167,8 +1186,14 @@ export class Room {
 		return out;
 	}
 
-	private sendChat(entry: ChatEntry): void {
+	/** `onlyTo` narrows delivery to a single player, for chat that must not reach
+	 * even the drawer — a not-yet-guessed player's spoiler-adjacent guess. */
+	private sendChat(entry: ChatEntry, onlyTo: PlayerId | null = null): void {
 		const msg: ServerMessage = { type: 'chat', entry };
+		if (onlyTo !== null) {
+			this.deps.send(onlyTo, msg);
+			return;
+		}
 		if (entry.scope === 'guessed' && this.turn) {
 			for (const p of this.players.values()) {
 				if (!p.connected) {
