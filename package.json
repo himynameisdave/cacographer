@@ -23,7 +23,7 @@
 		"check:e2e": "node_modules/@typescript/native/bin/tsc -p e2e/tsconfig.json --noEmit"
 	},
 	"devDependencies": {
-		"@himynameisdave/oxlint-config": "~1.2.0",
+		"@himynameisdave/oxlint-config": "~2.1.0",
 		"@playwright/test": "^1.63.0",
 		"@sveltejs/adapter-static": "^3.0.10",
 		"@sveltejs/kit": "^2.70.3",
@@ -34,7 +34,7 @@
 		"husky": "^9.1.7",
 		"lint-staged": "^17.6.0",
 		"oxfmt": "^0.65.0",
-		"oxlint": "^1.81.0",
+		"oxlint": "^1.88.0",
 		"oxlint-tsgolint": "^7.0.2001",
 		"svelte": "^5.57.1",
 		"svelte-check": "^4.7.6",
