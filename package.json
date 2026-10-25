@@ -35,7 +35,7 @@
 		"lint-staged": "^17.6.0",
 		"oxfmt": "^0.74.0",
 		"oxlint": "^1.89.0",
-		"oxlint-tsgolint": "^7.0.2004",
+		"oxlint-tsgolint": "^7.0.2005",
 		"svelte": "^5.57.1",
 		"svelte-check": "^4.7.7",
 		"svelte-copyright": "^3.0.0",
