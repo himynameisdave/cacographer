@@ -7,8 +7,8 @@ import type {
 	PlayerId,
 	ServerMessage,
 	VoteKind
-} from '$lib/protocol';
-import type { SocketStatus } from '$lib/realtime/client';
+} from '#lib/protocol.js';
+import type { SocketStatus } from '#lib/realtime/client.js';
 
 const CHAT_CAP = 200;
 const CLOSE_FLASH_MS = 2500;

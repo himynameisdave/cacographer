@@ -7,7 +7,7 @@
  * readonly CanvasRenderingContext2D, so every painter's `ctx` parameter
  * carries a prefer-readonly-parameter-types disable.
  */
-import { CANVAS_HEIGHT, CANVAS_WIDTH, type DrawOp } from '$lib/protocol';
+import { CANVAS_HEIGHT, CANVAS_WIDTH, type DrawOp } from '#lib/protocol.js';
 
 const W = CANVAS_WIDTH;
 const H = CANVAS_HEIGHT;

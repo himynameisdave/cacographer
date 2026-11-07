@@ -1,7 +1,7 @@
 <script lang="ts">
-	import type { PlayerIdentity } from '$lib/game.svelte';
-	import { playerColor } from '$lib/identity';
-	import { LIMITS, type ChatEntry, type PlayerId } from '$lib/protocol';
+	import type { PlayerIdentity } from '#lib/game.svelte.js';
+	import { playerColor } from '#lib/identity.js';
+	import { LIMITS, type ChatEntry, type PlayerId } from '#lib/protocol.js';
 
 	type Props = {
 		entries: ChatEntry[];

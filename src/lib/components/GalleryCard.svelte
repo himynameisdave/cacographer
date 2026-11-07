@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { CANVAS_HEIGHT, CANVAS_WIDTH, type GalleryEntry } from '$lib/protocol';
-	import { replayOps } from '$lib/render';
+	import { CANVAS_HEIGHT, CANVAS_WIDTH, type GalleryEntry } from '#lib/protocol.js';
+	import { replayOps } from '#lib/render.js';
 
 	type Props = {
 		label: string;

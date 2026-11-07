@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import type { ClientPlayer, ServerMessage } from '$lib/protocol';
-import { isMuted, notesFor, play, toggleMute } from '$lib/sound';
+import type { ClientPlayer, ServerMessage } from '#lib/protocol.js';
+import { isMuted, notesFor, play, toggleMute } from '#lib/sound.js';
 
 const ME = 'p1';
 const PLAYER: ClientPlayer = {

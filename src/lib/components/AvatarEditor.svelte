@@ -5,7 +5,7 @@
 </script>
 
 <script lang="ts">
-	import ColorPicker from '$lib/components/ColorPicker.svelte';
+	import ColorPicker from '#lib/components/ColorPicker.svelte';
 
 	type Props = {
 		/** Previously saved avatar (PNG data URL) to start from, if any. Read once. */

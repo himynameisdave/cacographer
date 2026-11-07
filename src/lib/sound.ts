@@ -1,4 +1,4 @@
-import type { PlayerId, ServerMessage } from '$lib/protocol';
+import type { PlayerId, ServerMessage } from '#lib/protocol.js';
 
 const MUTE_KEY = 'cacographer:muted';
 
