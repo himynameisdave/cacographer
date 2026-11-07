@@ -32,6 +32,8 @@ bun run dev        # game server (:3001) + Vite dev server (:5173), together
 
 Open http://localhost:5173, create a game, open the room link in a second tab to play against yourself.
 
+Built on **SvelteKit 3** with `adapter-static`: Kit config lives in `vite.config.ts` (there is no `svelte.config.js`), and app code is imported as `#lib/...`. `PUBLIC_GAME_SERVER` is the only client env var — declared in [`src/env.ts`](src/env.ts), baked in at build time (`.env` for builds, `.env.development` for dev). The server reads only `PORT` and `NODE_ENV`.
+
 ## Project layout
 
 ```
@@ -44,7 +46,8 @@ server/
   data/words.json    # word list
 
 src/
-  lib/
+  env.ts             # client env (PUBLIC_GAME_SERVER), read via $app/env/public
+  lib/               # imported as #lib/... (package.json "imports")
     protocol.ts      # single source of truth for every message shape on the wire
     game.svelte.ts    # client-side game store (Svelte 5 runes)
     realtime/         # WebSocket client + URL helpers

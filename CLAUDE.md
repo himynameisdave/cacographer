@@ -26,7 +26,7 @@ bun run build         # static client → build/
 
 CI (`.github/workflows/ci.yml`) runs lint → format:check → check → check:server → check:e2e → test → build, plus a parallel `e2e` job that runs the Playwright suite against the production server shape. All must pass; run them locally before pushing. A Husky pre-commit hook (`.husky/pre-commit`) already runs format and lint on what you stage via `lint-staged`, then `check:server` and `check` over the whole server and client projects (~0.8s combined).
 
-**The two typecheck scopes are separate on purpose.** The client tsconfig (via `.svelte-kit/tsconfig.json`) only reaches `src/**`, and the server is a Bun process with no DOM — so `server/tsconfig.json` is standalone, owns `server/**` plus the shared `src/lib/protocol.ts`, and is what `check:server` and oxlint's type-aware mode both use. Add a file under `server/` and it's covered automatically. The Playwright suite under `e2e/` is a third, deliberately separate scope (`e2e/tsconfig.json`, checked by `check:e2e`): it needs DOM + node + Playwright types together, which neither existing scope should absorb.
+**The two typecheck scopes are separate on purpose.** The client tsconfig (extending `node_modules/$app/tsconfig.json`) only reaches `src/**`, and the server is a Bun process with no DOM — so `server/tsconfig.json` is standalone, owns `server/**` plus the shared `src/lib/protocol.ts`, and is what `check:server` and oxlint's type-aware mode both use. Add a file under `server/` and it's covered automatically. The Playwright suite under `e2e/` is a third, deliberately separate scope (`e2e/tsconfig.json`, checked by `check:e2e`): it needs DOM + node + Playwright types together, which neither existing scope should absorb.
 
 **Both scopes type-check with the same TypeScript, and it is TS 7 — the native (Go) compiler.** `check:server` and `check:e2e` run TS 7's `tsc`, and `bun run check` goes through `scripts/check.ts` to run `svelte-check --tsgo-experimental-api`, which turns `.svelte` files into TypeScript, writes them under `.svelte-kit/`, and hands them to that same TS 7 `tsc`. That puts client typecheck, server typecheck, and the Go typechecker `oxlint-tsgolint` embeds all on one compiler, so none of the three can disagree.
 
@@ -34,8 +34,20 @@ CI (`.github/workflows/ci.yml`) runs lint → format:check → check → check:s
 
 Two things the client scope depends on, both easy to break:
 
-- **`bun run check` keeps its leading `svelte-kit sync`.** `tsconfig.json` extends the generated `.svelte-kit/tsconfig.json`, so on a cold tree there is nothing to extend until sync has run. It costs ~0.2s.
-- **`tsconfig.json` sets `noEmit` itself**, duplicating the generated `.svelte-kit/tsconfig.json`. Without it, a tree whose `extends` target doesn't exist yet falls back to this file's own options — which include `sourceMap` and no `outDir` — and the typechecker emits a `.js` and `.js.map` next to every source under `src/`. Those then join the program on the next run (`allowJs`/`checkJs` are on) and produce errors that have nothing to do with the source.
+- **`bun run check` keeps its leading `svelte-kit sync`.** `tsconfig.json` extends `$app/tsconfig`, which resolves to `node_modules/$app/tsconfig.json` — a file sync generates — so on a cold tree there is nothing to extend until sync has run. It costs ~0.2s.
+- **`tsconfig.json` sets `noEmit` itself**, duplicating the generated `node_modules/$app/tsconfig.json`. Without it, a tree whose `extends` target doesn't exist yet falls back to this file's own options — which include `sourceMap` and no `outDir` — and the typechecker emits a `.js` and `.js.map` next to every source under `src/`. Those then join the program on the next run (`allowJs`/`checkJs` are on) and produce errors that have nothing to do with the source.
+
+## SvelteKit 3
+
+- Kit config lives in `vite.config.ts` as `sveltekit({ ... })` options. There is no `svelte.config.js`. The adapter is `adapter-static` (SPA fallback): the Bun game server serves `build/` itself, so there is no Kit server runtime, no hooks, and no `adapter-node`.
+- Import app code via **`#lib/...`** (the `imports` field in `package.json`), never `$lib` (removed in Kit 3). Include the file extension: `#lib/protocol.js`, `#lib/components/Canvas.svelte`. Code under `server/` keeps plain relative imports.
+- `$app/env` (not `$app/environment`), `$app/state` (not `$app/stores`), `refreshAll` (not `invalidateAll`).
+- `goto()` rejects destinations that don't resolve to a route — keep it to internal paths and inside a `try`.
+
+### Environment
+
+- Client env is declared in `src/env.ts` with `defineEnvVars` and imported from `$app/env/public`. Today that is only `PUBLIC_GAME_SERVER`. It is `static: true` on purpose: with no Kit runtime there is nothing to inject a value at request time, so it is baked at build time (`.env` for builds, `.env.development` for `vite dev`). Never put secrets there — everything in it ships to the browser.
+- Server env is read in `server/index.ts` from `process.env` (just `PORT` and `NODE_ENV`). The engine never reads env; it takes everything through `deps`.
 
 ## Architecture rules (load-bearing — do not erode)
 
@@ -79,3 +91,8 @@ CI runs `bun test --coverage` and `bunfig.toml` sets a low `coverageThreshold` (
 - Small, logical commits; imperative subject line ("Add X", "Fix Y"), no trailer noise.
 - Feature branches + PRs into `main`; CI green before merge.
 - If you change the protocol, the engine, and the client in one effort, keep them reviewable: protocol commit first, then server, then client.
+
+### Pull requests — never open a second PR
+
+- Asked to rebase, fix, or update an existing PR? Push to **that PR's branch** (force-push with `--force-with-lease` after a rebase). **Never** open a new/duplicate PR for work that belongs to an existing one.
+- If pushing to that branch is blocked, stop and ask — don't route around it with another branch/PR.
