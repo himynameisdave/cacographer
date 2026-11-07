@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { serverBase } from '$lib/realtime/urls';
+	import { serverBase } from '#lib/realtime/urls.js';
 	import Copyright from 'svelte-copyright';
 
 	/** Minecraft-style splash lines — one is picked at random per page load. */

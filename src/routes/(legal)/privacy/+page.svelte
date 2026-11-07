@@ -1,5 +1,5 @@
 <script lang="ts">
-	import LegalDoc from '$lib/components/LegalDoc.svelte';
+	import LegalDoc from '#lib/components/LegalDoc.svelte';
 </script>
 
 <svelte:head>

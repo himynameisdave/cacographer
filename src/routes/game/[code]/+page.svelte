@@ -1,20 +1,20 @@
 <script lang="ts">
 	import { onDestroy } from 'svelte';
 	import { page } from '$app/state';
-	import { LIMITS, type DrawOp, type Settings, type VoteKind } from '$lib/protocol';
-	import { GameSocket } from '$lib/realtime/client';
-	import { wsUrl } from '$lib/realtime/urls';
-	import { GameState } from '$lib/game.svelte';
-	import { isMuted, play, toggleMute } from '$lib/sound';
-	import AvatarEditor from '$lib/components/AvatarEditor.svelte';
-	import Canvas from '$lib/components/Canvas.svelte';
-	import Chat from '$lib/components/Chat.svelte';
-	import ColorPicker from '$lib/components/ColorPicker.svelte';
-	import GalleryCard from '$lib/components/GalleryCard.svelte';
-	import PlayerList from '$lib/components/PlayerList.svelte';
-	import SettingsPanel from '$lib/components/SettingsPanel.svelte';
-	import Timer from '$lib/components/Timer.svelte';
-	import WordBlanks from '$lib/components/WordBlanks.svelte';
+	import { LIMITS, type DrawOp, type Settings, type VoteKind } from '#lib/protocol.js';
+	import { GameSocket } from '#lib/realtime/client.js';
+	import { wsUrl } from '#lib/realtime/urls.js';
+	import { GameState } from '#lib/game.svelte.js';
+	import { isMuted, play, toggleMute } from '#lib/sound.js';
+	import AvatarEditor from '#lib/components/AvatarEditor.svelte';
+	import Canvas from '#lib/components/Canvas.svelte';
+	import Chat from '#lib/components/Chat.svelte';
+	import ColorPicker from '#lib/components/ColorPicker.svelte';
+	import GalleryCard from '#lib/components/GalleryCard.svelte';
+	import PlayerList from '#lib/components/PlayerList.svelte';
+	import SettingsPanel from '#lib/components/SettingsPanel.svelte';
+	import Timer from '#lib/components/Timer.svelte';
+	import WordBlanks from '#lib/components/WordBlanks.svelte';
 
 	const NAME_KEY = 'cacographer:name';
 	const AVATAR_KEY = 'cacographer:avatar';

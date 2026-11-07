@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { LIMITS, SETTINGS_BOUNDS, type Settings } from '$lib/protocol';
+	import { LIMITS, SETTINGS_BOUNDS, type Settings } from '#lib/protocol.js';
 
 	type Props = {
 		settings: Settings;

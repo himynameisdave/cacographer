@@ -1,4 +1,4 @@
-import type { ClientMessage, ServerMessage } from '$lib/protocol';
+import type { ClientMessage, ServerMessage } from '#lib/protocol.js';
 
 export type SocketStatus = 'connecting' | 'open' | 'closed' | 'reconnecting';
 

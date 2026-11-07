@@ -1,8 +1,8 @@
 {
 	// Type-checking scope for `server/` — the client half is covered by the root tsconfig.json
-	// (via .svelte-kit/tsconfig.json, whose `include` only reaches `src/**`). Kept standalone
-	// rather than extending the root: that config inherits SvelteKit's DOM libs and `$lib`
-	// paths, neither of which apply to a Bun process.
+	// (which extends node_modules/$app/tsconfig.json and only includes `src/**`). Kept standalone
+	// rather than extending the root: that config inherits SvelteKit's DOM libs and `$app/*`
+	// types, neither of which apply to a Bun process.
 	//
 	// oxlint's --type-aware mode discovers the nearest tsconfig.json per file, so this file is
 	// also what gives tsgolint real types for `server/**` — see .oxlintrc.json.

@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { playerColor } from '$lib/identity';
-	import type  { ClientPlayer, PlayerId } from '$lib/protocol';
+	import { playerColor } from '#lib/identity.js';
+	import type  { ClientPlayer, PlayerId } from '#lib/protocol.js';
 
 	type Props = {
 		players: ClientPlayer[];

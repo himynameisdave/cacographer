@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { CANVAS_HEIGHT, CANVAS_WIDTH, type DrawOp } from '$lib/protocol';
-	import { paintOp, paintStroke, replayOps } from '$lib/render';
+	import { CANVAS_HEIGHT, CANVAS_WIDTH, type DrawOp } from '#lib/protocol.js';
+	import { paintOp, paintStroke, replayOps } from '#lib/render.js';
 
 	type Tool = 'pen' | 'fill' | 'eraser';
 
