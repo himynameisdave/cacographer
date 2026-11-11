@@ -37,7 +37,7 @@
 		"oxlint": "^1.92.0",
 		"oxlint-tsgolint": "^7.0.2006",
 		"svelte": "^5.57.3",
-		"svelte-check": "^4.7.7",
+		"svelte-check": "^4.7.8",
 		"svelte-copyright": "^3.0.0",
 		"typescript": "~6",
 		"vite": "^8.3.6"
