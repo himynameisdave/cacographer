@@ -40,7 +40,7 @@
 		"svelte-check": "^4.7.7",
 		"svelte-copyright": "^3.0.0",
 		"typescript": "~6",
-		"vite": "^8.2.2"
+		"vite": "^8.3.6"
 	},
 	"overrides": {
 		"cookie": "^0.7.0"
